@@ -1,0 +1,15 @@
+#!/bin/sh
+
+set -e
+
+PKG=klish
+
+if [ "$1" = configure ] ; then
+	
+   insserv konfd	
+
+fi
+
+#DEBHELPER#
+
+exit 0

@@ -1,0 +1,21 @@
+Source: klish
+Maintainer: Nixus Networks <debian@nixus.es>
+Uploaders: Nixus Networks <debian@nixus.es>
+Section: shells
+Priority: extra
+Standards-Version: 3.9.3
+Build-Depends: debhelper (>= 9~), dh-autoreconf, libexpat1-dev
+Homepage: http://www.nixus.es
+
+Package: klish
+Architecture: any
+Depends: libexpat1, ${shlibs:Depends}, ${misc:Depends}
+Description: command line interface shell
+ The klish is a framework for implementing a CISCO-like CLI on a UNIX systems.
+ It is configurable by XML files.
+
+Package: klish-dev
+Architecture: any
+Depends: klish, ${shlibs:Depends}, ${misc:Depends}
+Description: development files for klish
+ This package contains the development files for klish.

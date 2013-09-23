@@ -1,0 +1,24 @@
+#!/usr/bin/make -f
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+SRCTOP = `pwd`
+DESTDIR = $(SRCTOP)/debian/tmp
+
+INST_OWN = -o root -g root 
+MAKE_DIR = install -p -d $(INST_OWN) -m 755
+INST_FILE = install -c $(INST_OWN) -m 644
+INST_PROG = install -c $(INST_OWN) -m 755 -s
+INST_SCRIPT = install -c $(INST_OWN) -m 755
+
+%:
+	dh $@ --with autoreconf
+
+override_dh_autoreconf:
+	./autogen.sh
+
+override_dh_auto_configure:
+	./configure --prefix=/usr
+
+override_dh_auto_install:
+	$(MAKE) install DESTDIR=$(DESTDIR) LIBTOOL=libtool

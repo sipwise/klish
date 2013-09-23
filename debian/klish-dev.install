@@ -1,0 +1,5 @@
+clish.xsd	usr/share/doc/klish/
+xml-examples	usr/share/doc/klish/
+usr/include
+usr/lib/*.a
+usr/lib/*.so
