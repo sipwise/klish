@@ -1,0 +1,4 @@
+libclish_la_SOURCES += \
+	clish/ptype/ptype.c \
+	clish/ptype/ptype_dump.c \
+	clish/ptype/private.h

@@ -1,0 +1,4 @@
+libclish_la_SOURCES += \
+	clish/action/action.c \
+	clish/action/action_dump.c \
+	clish/action/private.h

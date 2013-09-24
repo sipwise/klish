@@ -1,0 +1,16 @@
+config BR2_PACKAGE_KLISH
+	bool "klish"
+	help
+	  The klish is a framework for implementing a CISCO-like CLI on a UNIX systems.
+	  It is configurable by XML files. The klish is the fork of clish project.
+
+	  http://klish.googlecode.com
+
+if BR2_PACKAGE_KLISH
+
+config BR2_PACKAGE_KLISH_SVN
+	bool "Get klish sources from the SVN repository"
+	help
+	  Use source code from SVN repository instead klish stable version.
+
+endif

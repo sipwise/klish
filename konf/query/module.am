@@ -1,0 +1,4 @@
+libkonf_la_SOURCES += \
+	konf/query/query.c \
+	konf/query/query_dump.c \
+	konf/query/private.h

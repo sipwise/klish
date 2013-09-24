@@ -1,0 +1,5 @@
+## Process this file with automake to produce Makefile.in
+liblub_la_SOURCES += \
+	lub/list/list.c \
+	lub/list/private.h
+

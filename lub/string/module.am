@@ -1,0 +1,10 @@
+liblub_la_SOURCES +=	lub/string/string_cat.c	\
+			lub/string/string_catn.c	\
+			lub/string/string_dup.c	\
+			lub/string/string_free.c	\
+			lub/string/string_nocasecmp.c	\
+			lub/string/string_nocasestr.c	\
+			lub/string/string_suffix.c	\
+			lub/string/string_escape.c	\
+			lub/string/private.h
+

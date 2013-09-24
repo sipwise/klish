@@ -1,0 +1,4 @@
+## Process this file with automake to produce Makefile.in
+libtinyrl_la_SOURCES += \
+	tinyrl/vt100/vt100.c \
+	tinyrl/vt100/private.h

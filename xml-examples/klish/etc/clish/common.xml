@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CLISH_MODULE xmlns="http://clish.sourceforge.net/XMLSchema" 
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+ xsi:schemaLocation="http://clish.sourceforge.net/XMLSchema
+                     http://clish.sourceforge.net/XMLSchema/clish.xsd">
+	<!--=======================================================-->
+
+<COMMAND name="exit"
+	help="Exit from the CLI"
+	lock="false">
+	<ACTION builtin="clish_close"/>
+</COMMAND>
+
+<COMMAND name="!"
+	help="Comments"
+	args="comment"
+	args_help="ignored comment text">
+	<ACTION builtin="clish_nop"/>
+</COMMAND>
+
+</CLISH_MODULE>
+
+

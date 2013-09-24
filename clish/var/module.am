@@ -1,0 +1,4 @@
+libclish_la_SOURCES += \
+	clish/var/var.c \
+	clish/var/var_dump.c \
+	clish/var/private.h

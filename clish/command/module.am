@@ -1,0 +1,4 @@
+libclish_la_SOURCES += \
+	clish/command/command.c \
+	clish/command/command_dump.c \
+	clish/command/private.h

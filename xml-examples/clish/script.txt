@@ -1,0 +1,8 @@
+help
+ping 127.0.0.1
+traceroute ?
+127.0.0.1
+debug
+ls
+exit
+exit

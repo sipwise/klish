@@ -1,0 +1,43 @@
+--------------------------------------------------------------------------------
+ Buildroot
+--------------------------------------------------------------------------------
+
+The buildroot/ directory contain the files to embed the klish package into the
+buildroot environment. The buildroot/ files must be copied to the
+buildroot's source tree package/klish directory. Then the package/Config.in
+file must be changed. Add the following string
+
+source "package/klish/Config.in"
+
+to the section started with 'menu "Shell and utilities"' (or to the another
+section if you think it will be better and you know what you do). After that you
+can configure buildroot and enable the building the klish package. You can find
+the menu for the klish within
+"Package Selection for the target"->"Shell and utilities" in the configurator.
+The klish's config allow to use the predefined version of klish or automatically
+download the last revision from the SVN repository.
+
+These files were tested with buildroot-2010.11.
+
+--------------------------------------------------------------------------------
+ OpenWRT
+--------------------------------------------------------------------------------
+
+The openwrt/ directory contain the files to embed the klish package into the
+OpenWRT environment.
+
+The OpenWRT's Makefile was created by Emmanuel Deloget.
+
+--------------------------------------------------------------------------------
+ Debian
+--------------------------------------------------------------------------------
+
+The contrib/debian dir contain konfd initscript for Debian system and some clish
+default XML config files. The klish source tree contain debian/ dir with all
+necessary information to build klish and klish-dev DEV packages. To build these
+packages the following packages must be installed:
+  * devscripts
+  * debhelper
+
+To build it type something like following command within klish source tree:
+$ debuild -uc -us

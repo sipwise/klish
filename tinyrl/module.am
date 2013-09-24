@@ -1,0 +1,21 @@
+## Process this file with automake to generate Makefile.in
+lib_LTLIBRARIES += libtinyrl.la
+libtinyrl_la_LIBADD = liblub.la
+libtinyrl_la_DEPENDENCIES = liblub.la
+
+libtinyrl_la_SOURCES = \
+	tinyrl/tinyrl.c \
+	tinyrl/private.h
+
+nobase_include_HEADERS += \
+	tinyrl/tinyrl.h \
+	tinyrl/history.h \
+	tinyrl/vt100.h
+
+EXTRA_DIST += \
+	tinyrl/history/module.am \
+	tinyrl/vt100/module.am \
+	tinyrl/README
+
+include $(top_srcdir)/tinyrl/history/module.am
+include $(top_srcdir)/tinyrl/vt100/module.am

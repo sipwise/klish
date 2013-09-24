@@ -1,0 +1,11 @@
+/**
+\defgroup lub "Little Useful Bits" Library
+@{
+
+\brief This is a general purpose library of small utilities. 
+
+The design and implementation are intended for embedded devices,
+ie. minimise footprint and maximise performance.
+
+@}
+*/

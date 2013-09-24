@@ -1,0 +1,14 @@
+This directory contains some example XML files which indicate some
+of what can be acheived with the CLISH library.
+
+The action fields are 'sh' scripts and were developed and
+tested on a cygwin system so some  of the command options to
+things like "ping" may be different on different systems. 
+(you should only need to change the ACTION tag to get them to work...) 
+
+To use these files set CLISH_PATH to point to this directory and 
+launch clish.
+
+\note
+Thanks to Tom Williams who gave me the basis for the
+"clock" command example.

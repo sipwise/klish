@@ -1,0 +1,12 @@
+liblub_la_SOURCES +=                            \
+                    lub/argv/argv__get_arg.c	\
+                    lub/argv/argv__get_argv.c	\
+                    lub/argv/argv__get_count.c	\
+                    lub/argv/argv__get_offset.c	\
+                    lub/argv/argv__get_quoted.c	\
+                    lub/argv/argv_new.c		\
+                    lub/argv/argv_nextword.c	\
+                    lub/argv/private.h
+
+
+

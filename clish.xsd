@@ -1,0 +1,510 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://clish.sourceforge.net/XMLSchema" targetNamespace="http://clish.sourceforge.net/XMLSchema">
+    <!--
+***********************************************************
+* Forward declare the main element identifiers
+***********************************************************
+-->
+    <xs:element name="CLISH_MODULE" type="clish_module_t"/>
+    <xs:element name="VIEW" type="view_t"/>
+    <xs:element name="COMMAND" type="command_t"/>
+    <xs:element name="STARTUP" type="startup_t"/>
+    <xs:element name="ACTION" type="action_t"/>
+    <xs:element name="OVERVIEW" type="overview_t"/>
+    <xs:element name="DETAIL" type="detail_t"/>
+    <xs:element name="PTYPE" type="ptype_t"/>
+    <xs:element name="PARAM" type="param_t"/>
+    <xs:element name="NAMESPACE" type="namespace_t"/>
+    <xs:element name="CONFIG" type="config_t"/>
+    <xs:element name="VAR" type="var_t"/>
+    <xs:element name="WATCHDOG" type="wdog_t"/>
+    <xs:element name="HOTKEY" type="hotkey_t"/>
+ 
+    <!--
+***********************************************************
+* The common simple types
+***********************************************************
+-->
+    <xs:simpleType name="bool_t">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="true"/>
+            <xs:enumeration value="false"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!--
+***********************************************************
+* <CLISH_MODULE> is the top level container.
+* Any commands which are defined within this tag are global in scope 
+* i.e. they are visible from all views.
+***********************************************************
+-->
+    <xs:complexType name="clish_module_t">
+        <xs:sequence>
+            <xs:element ref="OVERVIEW" minOccurs="0"/>
+            <xs:element ref="STARTUP" minOccurs="0"/>
+            <xs:element ref="PTYPE" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element ref="COMMAND" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element ref="VIEW" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element ref="NAMESPACE" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element ref="VAR" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element ref="WATCHDOG" minOccurs="0" maxOccurs="1"/>
+            <xs:element ref="HOTKEY" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+    <!--
+***********************************************************
+* Identify some attribute groups
+***********************************************************
+-->
+    <xs:attributeGroup name="menu_item_g">
+        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="help" type="xs:string" use="required"/>
+    </xs:attributeGroup>
+    <!--
+*******************************************************
+* <PTYPE> is used to define the syntax for a parameter type.
+*
+* name    - a textual name for this type. This name can be used to
+*         reference this type within a <PARAM? ptype attribute.
+*
+* help    - a textual string which describes the syntax of this type.
+*         When a parameter is filled out incorrectly on the CLI, this
+*         text will be used to prompt the user to fill out the value 
+*         correctly.
+*
+* pattern     - A regular expression which defines the syntax of the type.
+*
+* method      - The means by which the pattern is interpreted.
+*
+*               "regexp" [default] - A POSIX regular expression.
+*
+*               "integer"          - A numeric definition "min..max"
+*
+*               "select"           - A list of possible values.
+*               The syntax of the string is of the form:
+*                 "valueOne(ONE) valueTwo(TWO) valueThree(THREE)"
+*               where the text before the parethesis defines the syntax 
+*               that the user must use, and the value within the parenthesis 
+*               is the result expanded as a parameter value.
+*
+* preprocess  - An optional directive to process the value entered before
+*               validating it. This can greatly simplify the regular expressions
+*               needed to match case insensitive values.
+*
+*               "none" [default] - do nothing
+*
+*               "toupper"        - before validation convert to uppercase.
+*
+*               "tolower"        - before validation convert to lowercase.
+*
+********************************************************
+-->
+    <xs:simpleType name="ptype_method_e">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="regexp"/>
+            <xs:enumeration value="integer"/>
+            <xs:enumeration value="unsignedInteger"/>
+            <xs:enumeration value="select"/>
+            <xs:enumeration value="choice"/>
+            <xs:enumeration value="subcommand"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="ptype_preprocess_e">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="none"/>
+            <xs:enumeration value="toupper"/>
+            <xs:enumeration value="tolower"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="ptype_t">
+        <xs:attributeGroup ref="menu_item_g"/>
+        <xs:attribute name="pattern" type="xs:string"/>
+        <xs:attribute name="method" type="ptype_method_e" use="optional" default="regexp"/>
+        <xs:attribute name="preprocess" type="ptype_preprocess_e" use="optional" default="none"/>
+    </xs:complexType>
+    <!--
+*******************************************************
+* <VIEW> defines the contents of a specific CLI view.
+*
+* name      - a textual name for the view
+*
+* prompt    - a textual definition of the prompt to be
+*           used whilst in this view.
+*           NB. The prompt may contain environment
+*           or dynamic variables which are expanded
+*           before display.
+*
+* [depth]   - a depth of nested view (uses for config).
+*
+* [restore] - restore the depth or view of commands
+*           contained by this view
+********************************************************
+-->
+
+    <xs:simpleType name="restore_t">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="none"/>
+            <xs:enumeration value="depth"/>
+            <xs:enumeration value="view"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="view_t">
+        <xs:sequence>
+            <xs:element ref="NAMESPACE" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element ref="COMMAND" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element ref="HOTKEY" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="prompt" type="xs:string" use="optional"/>
+        <xs:attribute name="depth" type="xs:string" use="optional" default="0"/>
+        <xs:attribute name="restore" type="restore_t" use="optional" default="none"/>
+        <xs:attribute name="access" type="xs:string" use="optional"/>
+    </xs:complexType>
+    <!--
+*******************************************************
+* <STARTUP> is used to define what happens when the CLI
+* is started. Any text held in a <DETAIL> sub-element will
+* be used as banner text, then any defined <ACTION> will be 
+* executed. This action may provide Message Of The Day (MOTD)
+* type behaviour.
+*
+* view   - defines the view which will be transitioned to, on 
+*          successful execution of any <ACTION> tag.
+*
+* [viewid] - defined the new value of the ${VIEWID} variable to
+*          be used if a transition to a new view occurs.
+*
+* [default_shebang] - The default shebang for all commands.
+*
+* [timeout] - The idle timeout. The clish will exit if user
+*          have not press any key while this timeout.
+*
+* [lock] - The same as lock for COMMAND tag.
+*
+* [interrupt] - The same as interrupt for COMMAND tag.
+********************************************************
+-->
+    <xs:complexType name="startup_t">
+        <xs:sequence>
+            <xs:element ref="DETAIL" minOccurs="0"/>
+            <xs:element ref="ACTION" minOccurs="0"/>
+        </xs:sequence>
+        <xs:attribute name="view" type="xs:string" use="required"/>
+        <xs:attribute name="viewid" type="xs:string" use="optional"/>
+        <xs:attribute name="default_shebang" type="xs:string" use="optional"/>
+        <xs:attribute name="timeout" type="xs:string" use="optional"/>
+        <xs:attribute name="lock" type="bool_t" use="optional" default="true"/>
+        <xs:attribute name="interrupt" type="bool_t" use="optional" default="false"/>
+    </xs:complexType>
+    <!--
+*******************************************************
+* <COMMAND> is used to define a command within the CLI.
+*
+* name           - a textual name for this command. (This may contain
+*                spaces e.g. "display acl")
+*
+* help           - a textual string which describes the purpose of the
+*                command.
+*
+* [view]         - defines the view which will be transitioned to, on 
+*                successful execution of any <ACTION> tag. By default the
+*                current view stays in scope.
+*
+* [viewid]       - defined the new value of the ${VIEWID} variable to
+*                be used if a transition to a new view occurs. By default
+*                the viewid will retain it's current value.
+*
+* [access]       - defines the user group/level to which execution of this 
+*                command is restricted. By default there is no restriction.
+*                The exact interpretation of this field is dependant on the
+*                client of libclish but for example the clish and tclish 
+*                applications map this to the UNIX user groups.
+*
+* [escape_chars] - defines the characters which will be escaped (e.g. \$) before
+*                being expanded as a variable. By default the following
+*                characters will be escaped `|$<>&()#
+*
+* [args]         - defines a parameter name to be used to gather the rest of the
+*                command line after the formally defined parameters 
+*                (PARAM elements). The formatting of this parameter is a raw
+*                string containing as many words as there are on the rest of the
+*                command line.
+*
+* [args_help]    - a textual string which describes the purpose of the 'args' 
+*                parameter. If the "args" attribute is given then this MUST be
+*                given also.
+*
+* [lock]         - the boolean field that specify to lock lockfile while
+*                command execution or not. Default is true.
+*
+********************************************************
+-->
+    <xs:complexType name="command_t">
+        <xs:sequence>
+            <xs:element ref="DETAIL" minOccurs="0"/>
+            <xs:element ref="PARAM" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element ref="CONFIG" minOccurs="0"/>
+            <xs:element ref="ACTION" minOccurs="0"/>
+        </xs:sequence>
+        <xs:attributeGroup ref="menu_item_g"/>
+        <xs:attribute name="ref" type="xs:string" use="optional"/>
+        <xs:attribute name="view" type="xs:string" use="optional"/>
+        <xs:attribute name="viewid" type="xs:string" use="optional"/>
+        <xs:attribute name="access" type="xs:string" use="optional"/>
+        <xs:attribute name="args" type="xs:string" use="optional"/>
+        <xs:attribute name="args_help" type="xs:string" use="optional"/>
+        <xs:attribute name="escape_chars" type="xs:string" use="optional"/>
+        <xs:attribute name="lock" type="bool_t" use="optional" default="true"/>
+        <xs:attribute name="interrupt" type="bool_t" use="optional" default="false"/>
+    </xs:complexType>
+    <!--
+*******************************************************
+* <PARAM> This tag is used to define a parameter for a command.
+*
+* name      - a textual name for this parameter. 
+*
+* help      - a textual string which describes the purpose of the
+*           parameter.
+*
+* ptype     - Reference to a PTYPE name. This parameter will be 
+*           validated against the syntax specified for that type.
+*           The special value of "" indicates the parameter is a boolean flag.
+*           The verbatim presence of the texual name on the command line
+*           simply controls the conditional variable expansion for this 
+*           parameter.
+*
+* [mode]    - Parameter mode. It can be "common", "switch" or
+*           "subcommand".
+*
+* [prefix]  - defines the prefix for an optional parameter. A prefix
+*           with this value on the command line will signify the presence
+*           of an additional argument which will be validated as the
+*           value of this parameter.
+*
+* [optional]- Specify whether parameter is optional. The allowed values
+*           is "true" or "false". It's false by default.
+*
+* [order]   - Used only together with "optional=true" field.
+*           If order="true" then user can't enter previously declared
+*           optional parameters after current validated parameter.
+*           The allowed values is "true" or "false". It's false by default.
+*
+* [default] - defines a default value for a parameter. Any parameters
+*           at the end of command line which have default values need 
+*           not explicitly be entered.
+*
+* [value]   - defines the user's value for subcommand. If this option
+*           is defined the entered parameter will be compared to this
+*           value instead the "name" field. If this field is defined
+*           the mode of PARAM will be forced to "subcommand". The
+*           feature is implemented to support subcommands with the
+*           same names.
+*
+* [hidden]  - define the visibility of the parameter while ${__line}
+*           and ${__params} auto variables expanding. The allowed values
+*           is "true" and "false".
+*
+* [test]    - define the condition (see the description of 'test'
+*           utility) to process this parameter.
+********************************************************
+    -->
+
+    <xs:simpleType name="param_mode_t">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="common"/>
+            <xs:enumeration value="switch"/>
+            <xs:enumeration value="subcommand"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="param_t">
+        <xs:sequence>
+            <xs:element ref="PARAM" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attributeGroup ref="menu_item_g"/>
+        <xs:attribute name="ptype" type="xs:string" use="required"/>
+        <xs:attribute name="default" type="xs:string" use="optional"/>
+        <xs:attribute name="prefix" type="xs:string" use="optional"/>
+        <xs:attribute name="mode" type="param_mode_t" use="optional" default="common"/>
+        <xs:attribute name="optional" type="bool_t" use="optional" default="false"/>
+        <xs:attribute name="order" type="bool_t" use="optional" default="false"/>
+        <xs:attribute name="value" type="xs:string" use="optional"/>
+        <xs:attribute name="hidden" type="bool_t" use="optional" default="false"/>
+        <xs:attribute name="test" type="xs:string" use="optional"/>
+        <xs:attribute name="completion" type="xs:string" use="optional"/>
+    </xs:complexType>
+    <!--
+********************************************************
+* <ACTION> specifies the action to be taken for
+* a command.
+*
+* The textual contents of the tag are variable expanded
+* (environment, dynamic and parameter) the the resulting
+* text is interpreted by the client's script interpreter.
+*
+* In addition the optional 'builtin' attribute can specify
+* the name of an internal command which will be invoked
+* instead of the client's script handler.
+*
+* NB. for security reasons any special shell characters 
+* (e.g. $|<>`) are escaped before evaluation.
+*
+* [builtin] - specify the name of an internally registered
+*           function. The content of the ACTION tag is
+*           taken as the arguments to this builtin function.
+*
+* [shebang] - specify the programm to execute the action
+*           script.
+********************************************************
+-->
+    <xs:complexType name="action_t">
+        <xs:simpleContent>
+            <xs:extension base="xs:string">
+                <xs:attribute name="builtin" type="xs:string" use="optional"/>
+                <xs:attribute name="shebang" type="xs:string" use="optional"/>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+    <!--
+********************************************************
+* <OVERVIEW> specifies a textual description of the shell.
+*
+* This should provide instructions about key bindings and
+* escape sequences which can be used in the CLI.
+*
+********************************************************
+-->
+    <xs:simpleType name="overview_t">
+        <xs:restriction base="xs:string">
+            <xs:whiteSpace value="preserve"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <!--
+********************************************************
+* <DETAIL> specifies a textual description.
+*
+* This may be used within the scope of a <COMMAND> 
+* element, in which case it would typically contain 
+* detailed usage instructions including examples.
+*
+* This may also be used within the scope of a <STARTUP>
+* element, in which case the text is used as the banner
+* details which are displayed on shell startup. This is
+* shown before any specified <ACTION> is executed.
+*
+* This text may also be used in the production of user manuals.
+********************************************************
+-->
+    <xs:simpleType name="detail_t">
+        <xs:restriction base="xs:string">
+            <xs:whiteSpace value="preserve"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <!--
+*******************************************************
+* <NAMESPACE> import commands from specific view to current view.
+*
+* ref            - the view to import commands from
+*
+* [prefix]       - the prefix for imported commands
+*
+* [prefix_help]  - the help for namespace prefix
+*
+* [help]         - a boolean flag to use imported
+*                commands while help
+*
+* [completion]   - a boolean flag to use imported
+*                commands while completion
+*
+* [context_help] - a boolean flag to use imported
+*                commands while context help
+*
+* [inherit]      - a boolean flag to inherit nested
+*                namespace commands recursively
+********************************************************
+-->
+
+    <xs:complexType name="namespace_t">
+        <xs:attribute name="ref" type="xs:string" use="required"/>
+        <xs:attribute name="prefix" type="xs:string" use="optional"/>
+        <xs:attribute name="prefix_help" type="xs:string" use="optional"/>
+        <xs:attribute name="help" type="bool_t" use="optional" default="false"/>
+        <xs:attribute name="completion" type="bool_t" use="optional" default="true"/>
+        <xs:attribute name="context_help" type="bool_t" use="optional" default="false"/>
+        <xs:attribute name="inherit" type="bool_t" use="optional" default="true"/>
+        <xs:attribute name="access" type="xs:string" use="optional"/>
+    </xs:complexType>
+
+<!--
+*******************************************************
+* <CONFIG> Specify the config operation.
+*
+* operation - config operation to perform
+*
+********************************************************
+-->
+    <xs:simpleType name="operation_t">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="none"/>
+            <xs:enumeration value="set"/>
+            <xs:enumeration value="unset"/>
+            <xs:enumeration value="dump"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="config_t">
+        <xs:attribute name="operation" type="operation_t" use="optional" default="set"/>
+        <xs:attribute name="priority" type="xs:string" use="optional" default="0x7f00"/>
+        <xs:attribute name="pattern" type="xs:string" use="optional" default="^${__cmd}"/>
+        <xs:attribute name="file" type="xs:string" use="optional" default="startup-config"/>
+        <xs:attribute name="splitter" type="bool_t" use="optional" default="true"/>
+        <xs:attribute name="sequence" type="xs:string" use="optional" default="0"/>
+        <xs:attribute name="unique" type="bool_t" use="optional" default="true"/>
+        <xs:attribute name="depth" type="xs:string" use="optional"/>
+    </xs:complexType>
+
+<!--
+*******************************************************
+* <VAR> Specify the variable.
+*
+*
+*
+********************************************************
+-->
+    <xs:complexType name="var_t">
+        <xs:sequence>
+            <xs:element ref="ACTION" minOccurs="0"/>
+        </xs:sequence>
+        <xs:attributeGroup ref="menu_item_g"/>
+        <xs:attribute name="value" type="xs:string" use="optional"/>
+        <xs:attribute name="dynamic" type="bool_t" use="optional" default="false"/>
+    </xs:complexType>
+
+<!--
+*******************************************************
+* <WATCHDOG> is used to recover system after errors.
+*
+********************************************************
+-->
+    <xs:complexType name="wdog_t">
+        <xs:sequence>
+            <xs:element ref="ACTION" minOccurs="1"/>
+        </xs:sequence>
+    </xs:complexType>
+
+<!--
+*******************************************************
+* <HOTKEY> is used to define hotkey actions
+*
+********************************************************
+-->
+    <xs:complexType name="hotkey_t">
+        <xs:attribute name="key" type="xs:string" use="required"/>
+        <xs:attribute name="cmd" type="xs:string" use="required"/>
+    </xs:complexType>
+
+</xs:schema>

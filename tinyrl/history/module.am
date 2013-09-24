@@ -1,0 +1,7 @@
+## Process this file with automake to produce Makefile.in
+libtinyrl_la_SOURCES      +=                                     \
+                            tinyrl/history/history.c         \
+                            tinyrl/history/history_entry.c   \
+                            tinyrl/history/private.h
+
+			

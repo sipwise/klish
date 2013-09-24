@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# Check for missing binaries
+BIN=/usr/bin/konfd
+test -x $BIN || exit 5
+
+PID=/var/run/konfd.pid
+
+case "$1" in
+start)
+	echo "Starting konfd daemon..."
+	test -r $PID && { echo "The service is already running."; exit 1; }
+	$BIN -p $PID
+	;;
+stop)
+	echo "Stopping konfd daemon..."
+	test ! -r $PID && { echo "The service is not running."; exit 1; }
+	kill $(cat $PID)
+	;;
+*)
+	echo "Usage: $0 {start|stop}"
+	exit 1
+	;;
+esac

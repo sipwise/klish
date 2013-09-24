@@ -1,0 +1,4 @@
+libclish_la_SOURCES += \
+	clish/hotkey/hotkey.c \
+	clish/hotkey/hotkey_dump.c \
+	clish/hotkey/private.h

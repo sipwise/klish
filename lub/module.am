@@ -1,0 +1,36 @@
+## Process this file with automake to generate Makefile.in
+lib_LTLIBRARIES         += liblub.la
+liblub_la_SOURCES        =
+liblub_la_LIBADD         =
+
+nobase_include_HEADERS += \
+    lub/argv.h \
+    lub/bintree.h \
+    lub/list.h \
+    lub/ctype.h \
+    lub/c_decl.h \
+    lub/dump.h \
+    lub/string.h \
+    lub/types.h \
+    lub/system.h \
+    lub/db.h
+
+EXTRA_DIST +=   \
+    lub/argv/module.am \
+    lub/bintree/module.am \
+    lub/list/module.am \
+    lub/ctype/module.am \
+    lub/dump/module.am \
+    lub/string/module.am \
+    lub/system/module.am \
+    lub/db/module.am \
+    lub/README
+
+include $(top_srcdir)/lub/argv/module.am
+include $(top_srcdir)/lub/bintree/module.am
+include $(top_srcdir)/lub/list/module.am
+include $(top_srcdir)/lub/ctype/module.am
+include $(top_srcdir)/lub/dump/module.am
+include $(top_srcdir)/lub/string/module.am
+include $(top_srcdir)/lub/system/module.am
+include $(top_srcdir)/lub/db/module.am

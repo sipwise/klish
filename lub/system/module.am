@@ -1,0 +1,5 @@
+liblub_la_SOURCES +=	lub/system/test.c \
+			lub/system/system_test.c \
+			lub/system/system_file.c \
+			lub/system/private.h
+

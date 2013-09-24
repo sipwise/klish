@@ -1,0 +1,16 @@
+/**
+\defgroup tinyrl "Tiny Readline Library"
+@{
+
+This library provides a simple replacement of the "readline" functionality.
+
+The readline interface and implementation has some fundamental flaws when
+it comes to try and run it within a single memory space envrioment. e.g. vxWorks
+- The use of global variables prevents multiple sessions from co-existing.
+- The comprehensiveness of the library makes it large, and it contains 
+  more features than are needed in an embedded system.
+- It relies on other (large) libraries which are not typically available on an
+  embedded system e.g. termcap.
+
+@}
+*/

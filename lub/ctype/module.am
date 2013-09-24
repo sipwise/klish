@@ -1,0 +1,5 @@
+liblub_la_SOURCES +=	lub/ctype/ctype_isspace.c	\
+			lub/ctype/ctype_isdigit.c	\
+			lub/ctype/ctype_toupper.c	\
+			lub/ctype/ctype_tolower.c
+

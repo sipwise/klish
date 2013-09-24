@@ -1,0 +1,13 @@
+/**
+\defgroup clish "CLI Shell" Library
+@{
+
+This library provides the core functionality for a shell to implement a 
+CISCO-like user interface. The look and feel is fully defined by a set of XML
+files which are loaded when the shell starts up.
+
+The schema for these XML files can be found in 
+http://clish.sourceforge.net/XMLSchema/clish.xsd
+
+@}
+*/

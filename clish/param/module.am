@@ -1,0 +1,4 @@
+libclish_la_SOURCES += \
+	clish/param/param.c \
+	clish/param/param_dump.c \
+	clish/param/private.h

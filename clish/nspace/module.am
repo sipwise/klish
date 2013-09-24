@@ -1,0 +1,4 @@
+libclish_la_SOURCES += \
+	clish/nspace/nspace.c \
+	clish/nspace/nspace_dump.c \
+	clish/nspace/private.h
