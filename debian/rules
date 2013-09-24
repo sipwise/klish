@@ -20,5 +20,8 @@ override_dh_autoreconf:
 override_dh_auto_configure:
 	./configure --prefix=/usr
 
+override_dh_installinit:
+	dh_installinit --name=konfd -pklish
+
 override_dh_auto_install:
-	$(MAKE) install DESTDIR=$(DESTDIR) LIBTOOL=libtool
+	dh_auto_install --destdir=$(DESTDIR)
