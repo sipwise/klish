@@ -1,0 +1,4 @@
+{
+	global: clish_plugin_init; clish_plugin_fini; clish_plugin_lua_action;
+	local: *;
+};

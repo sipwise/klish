@@ -19,6 +19,8 @@
     <xs:element name="VAR" type="var_t"/>
     <xs:element name="WATCHDOG" type="wdog_t"/>
     <xs:element name="HOTKEY" type="hotkey_t"/>
+    <xs:element name="PLUGIN" type="plugin_t"/>
+    <xs:element name="HOOK" type="hook_t"/>
  
     <!--
 ***********************************************************
@@ -50,6 +52,8 @@
             <xs:element ref="VAR" minOccurs="0" maxOccurs="unbounded"/>
             <xs:element ref="WATCHDOG" minOccurs="0" maxOccurs="1"/>
             <xs:element ref="HOTKEY" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element ref="PLUGIN" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element ref="HOOK" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
     </xs:complexType>
     <!--
@@ -186,6 +190,9 @@
 * [lock] - The same as lock for COMMAND tag.
 *
 * [interrupt] - The same as interrupt for COMMAND tag.
+*
+* [default_plugin] - Use (or don't use) default plugin.
+*                    It can be true or false.
 ********************************************************
 -->
     <xs:complexType name="startup_t">
@@ -199,6 +206,7 @@
         <xs:attribute name="timeout" type="xs:string" use="optional"/>
         <xs:attribute name="lock" type="bool_t" use="optional" default="true"/>
         <xs:attribute name="interrupt" type="bool_t" use="optional" default="false"/>
+        <xs:attribute name="default_plugin" type="bool_t" use="optional" default="true"/>
     </xs:complexType>
     <!--
 *******************************************************
@@ -479,7 +487,8 @@
         <xs:sequence>
             <xs:element ref="ACTION" minOccurs="0"/>
         </xs:sequence>
-        <xs:attributeGroup ref="menu_item_g"/>
+        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="help" type="xs:string" use="optional"/>
         <xs:attribute name="value" type="xs:string" use="optional"/>
         <xs:attribute name="dynamic" type="bool_t" use="optional" default="false"/>
     </xs:complexType>
@@ -505,6 +514,43 @@
     <xs:complexType name="hotkey_t">
         <xs:attribute name="key" type="xs:string" use="required"/>
         <xs:attribute name="cmd" type="xs:string" use="required"/>
+    </xs:complexType>
+
+<!--
+*******************************************************
+* <PLUGIN> is used to dynamically load plugins
+*
+********************************************************
+-->
+    <xs:complexType name="plugin_t">
+        <xs:attribute name="file" type="xs:string" use="required"/>
+        <xs:attribute name="name" type="xs:string" use="optional"/>
+    </xs:complexType>
+
+<!--
+*******************************************************
+* <HOOK> is used to redefine internal hooks
+*
+* name - The name of internal hook (init, fini, access, config, log).
+*
+* [builtin] - specify the name of an internally registered
+*           function.
+*
+********************************************************
+-->
+    <xs:simpleType name="hook_list_e">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="init"/>
+            <xs:enumeration value="fini"/>
+            <xs:enumeration value="access"/>
+            <xs:enumeration value="config"/>
+            <xs:enumeration value="log"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="hook_t">
+        <xs:attribute name="name" type="hook_list_e"/>
+        <xs:attribute name="builtin" type="xs:string" use="optional"/>
     </xs:complexType>
 
 </xs:schema>

@@ -10,15 +10,15 @@
 
 #include "lub/string.h"
 #include "lub/db.h"
+#include "lub/list.h"
+#include "clish/plugin.h"
 
 /*-------------------------------------------------------- */
 static void clish_shell_init(clish_shell_t * this,
-	const clish_shell_hooks_t * hooks,
-	void *cookie, FILE * istream,
-	FILE * ostream,
-	bool_t stop_on_error)
+	FILE * istream, FILE * ostream, bool_t stop_on_error)
 {
 	clish_ptype_t *tmp_ptype = NULL;
+	int i;
 
 	/* initialise the tree of views */
 	lub_bintree_init(&this->view_tree,
@@ -35,11 +35,23 @@ static void clish_shell_init(clish_shell_t * this,
 		clish_var_bt_offset(),
 		clish_var_bt_compare, clish_var_bt_getkey);
 
-	assert((NULL != hooks) && (NULL != hooks->script_fn));
+	/* Initialize plugin list */
+	this->plugins = lub_list_new(NULL);
 
-	/* set up defaults */
-	this->client_hooks = hooks;
-	this->client_cookie = cookie;
+	/* Initialise the list of unresolved (yet) symbols */
+	this->syms = lub_list_new(clish_sym_compare);
+
+	/* Create userdata storage */
+	this->udata = lub_list_new(clish_udata_compare);
+	assert(this->udata);
+
+	/* Hooks */
+	for (i = 0; i < CLISH_SYM_TYPE_MAX; i++) {
+		this->hooks[i] = clish_sym_new(NULL, NULL, i);
+		this->hooks_use[i] = BOOL_FALSE;
+	}
+
+	/* Set up defaults */
 	this->global = NULL;
 	this->startup = NULL;
 	this->idle_timeout = 0; /* No idle timeout by default */
@@ -59,7 +71,9 @@ static void clish_shell_init(clish_shell_t * this,
 	this->fifo_name = NULL;
 	this->interactive = BOOL_TRUE; /* The interactive shell by default. */
 	this->log = BOOL_FALSE; /* Disable logging by default */
+	this->dryrun = BOOL_FALSE; /* Disable dry-run by default */
 	this->user = lub_db_getpwuid(getuid()); /* Get user information */
+	this->default_plugin = BOOL_TRUE; /* Load default plugin by default */
 
 	/* Create internal ptypes and params */
 	/* Current depth */
@@ -92,12 +106,24 @@ static void clish_shell_init(clish_shell_t * this,
 }
 
 /*--------------------------------------------------------- */
-static void clish_shell_fini(clish_shell_t * this)
+static void clish_shell_fini(clish_shell_t *this)
 {
 	clish_view_t *view;
 	clish_ptype_t *ptype;
 	clish_var_t *var;
 	unsigned i;
+	lub_list_node_t *iter;
+
+	/* Free all loaded plugins */
+	while ((iter = lub_list__get_head(this->plugins))) {
+		/* Remove the symbol from the list */
+		lub_list_del(this->plugins, iter);
+		/* Free the instance */
+		clish_plugin_free((clish_plugin_t *)lub_list_node__get_data(iter),
+			(void *)this);
+		lub_list_node_free(iter);
+	}
+	lub_list_free(this->plugins);
 
 	/* delete each VIEW held  */
 	while ((view = lub_bintree_findfirst(&this->view_tree))) {
@@ -116,6 +142,33 @@ static void clish_shell_fini(clish_shell_t * this)
 		lub_bintree_remove(&this->var_tree, var);
 		clish_var_delete(var);
 	}
+
+	/* Free empty hooks */
+	for (i = 0; i < CLISH_SYM_TYPE_MAX; i++) {
+		if (clish_sym__get_name(this->hooks[i]))
+			continue;
+		clish_sym_free(this->hooks[i]);
+	}
+
+	/* Free symbol list */
+	while ((iter = lub_list__get_head(this->syms))) {
+		/* Remove the symbol from the list */
+		lub_list_del(this->syms, iter);
+		/* Free the instance */
+		clish_sym_free((clish_sym_t *)lub_list_node__get_data(iter));
+		lub_list_node_free(iter);
+	}
+	lub_list_free(this->syms);
+
+	/* Free user data storage */
+	while ((iter = lub_list__get_head(this->udata))) {
+		/* Remove the symbol from the list */
+		lub_list_del(this->udata, iter);
+		/* Free the instance */
+		clish_udata_free((clish_udata_t *)lub_list_node__get_data(iter));
+		lub_list_node_free(iter);
+	}
+	lub_list_free(this->udata);
 
 	/* free the textual details */
 	lub_string_free(this->overview);
@@ -154,35 +207,23 @@ static void clish_shell_fini(clish_shell_t * this)
 }
 
 /*-------------------------------------------------------- */
-clish_shell_t *clish_shell_new(const clish_shell_hooks_t * hooks,
-	void *cookie,
+clish_shell_t *clish_shell_new(
 	FILE * istream,
 	FILE * ostream,
 	bool_t stop_on_error)
 {
 	clish_shell_t *this = malloc(sizeof(clish_shell_t));
 
-	if (this) {
-		clish_shell_init(this, hooks, cookie,
-			istream, ostream, stop_on_error);
-		if (hooks->init_fn) {
-			/* now call the client initialisation */
-			if (BOOL_TRUE != hooks->init_fn(this))
-				this->state = SHELL_STATE_CLOSING;
-		}
-	}
+	if (this)
+		clish_shell_init(this, istream, ostream, stop_on_error);
 
 	return this;
 }
 
 /*--------------------------------------------------------- */
-void clish_shell_delete(clish_shell_t * this)
+void clish_shell_delete(clish_shell_t *this)
 {
-	/* now call the client finalisation */
-	if (this->client_hooks->fini_fn)
-		this->client_hooks->fini_fn(this);
 	clish_shell_fini(this);
-
 	free(this);
 }
 

@@ -22,10 +22,10 @@
 
 #include "lub/string.h"
 #include "lub/db.h"
-#include "internal.h"
+#include "clish/shell.h"
 
 /*--------------------------------------------------------- */
-bool_t clish_access_callback(const clish_shell_t * shell, const char *access)
+CLISH_HOOK_ACCESS(clish_hook_access)
 {
 	bool_t allowed = BOOL_FALSE; /* assume the user is not allowed */
 #ifdef HAVE_GRP_H
@@ -50,6 +50,11 @@ bool_t clish_access_callback(const clish_shell_t * shell, const char *access)
 	/* The allowed groups are indicated by a colon-separated (:) list. */
 	for (tmp_access = strtok_r(full_access, ":", &saveptr);
 		tmp_access; tmp_access = strtok_r(NULL, ":", &saveptr)) {
+		/* Check for the "*" wildcard */
+		if (0 == strcmp("*", tmp_access)) {
+			allowed = BOOL_TRUE;
+			break;
+		}
 		/* The internal loop goes trough the system group list */
 		for (i = 0; i < num_groups; i++) {
 			struct group *ptr = lub_db_getgrgid(group_list[i]);
@@ -63,6 +68,8 @@ bool_t clish_access_callback(const clish_shell_t * shell, const char *access)
 			}
 			free(ptr);
 		}
+		if (BOOL_TRUE == allowed)
+			break;
 	}
 
 	lub_string_free(full_access);

@@ -1,3 +1,5 @@
+#ifdef DEBUG
+
 /*
  * action_dump.c
  */
@@ -8,13 +10,16 @@
 /*--------------------------------------------------------- */
 void clish_action_dump(const clish_action_t *this)
 {
+	char *builtin_name;
+
 	lub_dump_printf("action(%p)\n", this);
 	lub_dump_indent();
 
 	lub_dump_printf("script  : %s\n",
 		this->script ? this->script : "(null)");
+	builtin_name = clish_sym__get_name(this->builtin);
 	lub_dump_printf("builtin : %s\n",
-		this->builtin ? this->builtin : "(null)");
+		builtin_name ? builtin_name : "(null)");
 	lub_dump_printf("shebang : %s\n",
 		this->shebang ? this->shebang : "(null)");
 
@@ -22,3 +27,5 @@ void clish_action_dump(const clish_action_t *this)
 }
 
 /*--------------------------------------------------------- */
+
+#endif /* DEBUG */

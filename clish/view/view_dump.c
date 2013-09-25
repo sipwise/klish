@@ -1,3 +1,5 @@
+#ifdef DEBUG
+
 /*
  * view_dump.c
  */
@@ -33,3 +35,5 @@ void clish_view_dump(clish_view_t * this)
 }
 
 /*--------------------------------------------------------- */
+
+#endif /* DEBUG */

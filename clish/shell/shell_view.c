@@ -47,10 +47,17 @@ clish_view_t *clish_shell__get_view(const clish_shell_t * this)
 }
 
 /*--------------------------------------------------------- */
-unsigned clish_shell__get_depth(const clish_shell_t * this)
+unsigned int clish_shell__get_depth(const clish_shell_t *this)
 {
 	assert(this);
 	return this->depth;
+}
+
+/*--------------------------------------------------------- */
+void clish_shell__set_depth(clish_shell_t *this, unsigned int depth)
+{
+	assert(this);
+	this->depth = depth;
 }
 
 /*--------------------------------------------------------- */

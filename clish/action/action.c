@@ -27,7 +27,6 @@ static void clish_action_init(clish_action_t *this)
 static void clish_action_fini(clish_action_t *this)
 {
 	lub_string_free(this->script);
-	lub_string_free(this->builtin);
 	lub_string_free(this->shebang);
 }
 
@@ -70,15 +69,13 @@ char *clish_action__get_script(const clish_action_t *this)
 }
 
 /*--------------------------------------------------------- */
-void clish_action__set_builtin(clish_action_t *this, const char *builtin)
+void clish_action__set_builtin(clish_action_t *this, clish_sym_t *builtin)
 {
-	if (this->builtin)
-		lub_string_free(this->builtin);
-	this->builtin = lub_string_dup(builtin);
+	this->builtin = builtin;
 }
 
 /*--------------------------------------------------------- */
-const char *clish_action__get_builtin(const clish_action_t *this)
+clish_sym_t *clish_action__get_builtin(const clish_action_t *this)
 {
 	return this->builtin;
 }

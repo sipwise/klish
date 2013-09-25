@@ -1,3 +1,5 @@
+#ifdef DEBUG
+
 /*
  * shell_dump.c
  */
@@ -42,3 +44,5 @@ void clish_shell_dump(clish_shell_t * this)
 }
 
 /*--------------------------------------------------------- */
+
+#endif /* DEBUG */

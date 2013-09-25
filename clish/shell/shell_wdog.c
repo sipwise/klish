@@ -11,7 +11,7 @@
 int clish_shell_timeout_fn(tinyrl_t *tinyrl)
 {
 	clish_context_t *context = tinyrl__get_context(tinyrl);
-	clish_shell_t *this = context->shell;
+	clish_shell_t *this = clish_context__get_shell(context);
 
 	/* Idle timeout */
 	if (!this->wdog_active) {
@@ -33,7 +33,7 @@ int clish_shell_timeout_fn(tinyrl_t *tinyrl)
 int clish_shell_keypress_fn(tinyrl_t *tinyrl, int key)
 {
 	clish_context_t *context = tinyrl__get_context(tinyrl);
-	clish_shell_t *this = context->shell;
+	clish_shell_t *this = clish_context__get_shell(context);
 
 	if (this->wdog_active) {
 		this->wdog_active = BOOL_FALSE;
@@ -50,9 +50,11 @@ int clish_shell_wdog(clish_shell_t *this)
 
 	assert(this->wdog);
 
-	context.shell = this;
-	context.cmd = this->wdog;
-	context.pargv = NULL;
+	/* Prepare context */
+	clish_context_init(&context, this);
+	clish_context__set_cmd(&context, this->wdog);
+	clish_context__set_action(&context,
+		clish_command__get_action(this->wdog));
 
 	/* Call watchdog script */
 	return clish_shell_execute(&context, NULL);

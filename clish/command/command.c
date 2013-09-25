@@ -32,7 +32,7 @@ clish_command_init(clish_command_t *this, const char *name, const char *text)
 	this->alias_view = NULL;
 	this->paramv = clish_paramv_new();
 	this->viewid = NULL;
-	this->view = NULL;
+	this->viewname = NULL;
 	this->action = clish_action_new();
 	this->config = clish_config_new();
 	this->detail = NULL;
@@ -58,11 +58,11 @@ static void clish_command_fini(clish_command_t * this)
 	/* finalize each of the parameter instances */
 	clish_paramv_delete(this->paramv);
 
-	lub_string_free(this->alias);
-	lub_string_free(this->view);
-	lub_string_free(this->viewid);
 	clish_action_delete(this->action);
 	clish_config_delete(this->config);
+	lub_string_free(this->alias);
+	lub_string_free(this->viewname);
+	lub_string_free(this->viewid);
 	lub_string_free(this->detail);
 	lub_string_free(this->escape_chars);
 	lub_string_free(this->regex_chars);
@@ -251,43 +251,39 @@ clish_config_t *clish_command__get_config(const clish_command_t *this)
 }
 
 /*--------------------------------------------------------- */
-void clish_command__set_view(clish_command_t * this, const char *view)
+void clish_command__set_viewname(clish_command_t * this, const char *viewname)
 {
-	assert(NULL == this->view);
-	clish_command__force_view(this, view);
+	assert(NULL == this->viewname);
+	clish_command__force_viewname(this, viewname);
 }
 
 /*--------------------------------------------------------- */
-void clish_command__force_view(clish_command_t *this, const char *view)
+void clish_command__force_viewname(clish_command_t * this, const char *viewname)
 {
-	if (this->view)
-		lub_string_free(this->view);
-	this->view = lub_string_dup(view);
+	this->viewname = lub_string_dup(viewname);
 }
 
 /*--------------------------------------------------------- */
-const char *clish_command__get_view(const clish_command_t *this)
+char *clish_command__get_viewname(const clish_command_t * this)
 {
-	return this->view;
+	return this->viewname;
 }
 
 /*--------------------------------------------------------- */
-void clish_command__set_viewid(clish_command_t *this, const char *viewid)
+void clish_command__set_viewid(clish_command_t * this, const char *viewid)
 {
 	assert(NULL == this->viewid);
 	clish_command__force_viewid(this, viewid);
 }
 
 /*--------------------------------------------------------- */
-void clish_command__force_viewid(clish_command_t *this, const char *viewid)
+void clish_command__force_viewid(clish_command_t * this, const char *viewid)
 {
-	if (this->viewid)
-		lub_string_free(this->viewid);
 	this->viewid = lub_string_dup(viewid);
 }
 
 /*--------------------------------------------------------- */
-char *clish_command__get_viewid(const clish_command_t *this)
+char *clish_command__get_viewid(const clish_command_t * this)
 {
 	return this->viewid;
 }

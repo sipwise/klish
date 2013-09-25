@@ -9,6 +9,6 @@
  *--------------------------------------------------------- */
 struct clish_action_s {
 	char *script;
-	char *builtin;
+	clish_sym_t *builtin;
 	char *shebang;
 };

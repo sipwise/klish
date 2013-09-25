@@ -1,3 +1,5 @@
+#ifdef DEBUG
+
 #include "private.h"
 #include "lub/dump.h"
 
@@ -46,3 +48,5 @@ void konf_query_dump(konf_query_t *this)
 
 	lub_dump_undent();
 }
+
+#endif /* DEBUG */

@@ -1,8 +1,8 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 m4_define([MAJOR_VERSION], 1)
-m4_define([MINOR_VERSION], 6)
-m4_define([MICRO_VERSION], 6)
+m4_define([MINOR_VERSION], 7)
+m4_define([MICRO_VERSION], 0)
 
 AC_PREREQ(2.59)
 AC_INIT([klish],
@@ -29,6 +29,36 @@ AC_CHECK_SIZEOF(int)
 AC_CHECK_SIZEOF(long)
 AC_CHECK_SIZEOF(size_t)
 
+#########################################
+# See if linker supports version scripts
+#########################################
+# Check if LD supports linker scripts,
+# and define automake conditional HAVE_LD_VERSION_SCRIPT if so.
+AC_ARG_ENABLE([ld-version-script],
+              AS_HELP_STRING([--enable-ld-version-script],
+                             [enable linker version script (default is enabled when possible)]),
+                             [have_ld_version_script=$enableval], [])
+if test -z "$have_ld_version_script"; then
+    AC_MSG_CHECKING([if LD -Wl,--version-script works])
+    save_LDFLAGS="$LDFLAGS"
+    LDFLAGS="$LDFLAGS -Wl,--version-script=conftest.map"
+    cat > conftest.map <<EOF
+VERS_1 {
+    global: sym;
+};
+
+VERS_2 {
+    global: sym;
+} VERS_1;
+EOF
+    AC_LINK_IFELSE([AC_LANG_SOURCE([int main() { return 0; }])],
+                   [have_ld_version_script=yes], [have_ld_version_script=no])
+    rm -f conftest.map
+    LDFLAGS="$save_LDFLAGS"
+    AC_MSG_RESULT($have_ld_version_script)
+fi
+AM_CONDITIONAL(HAVE_LD_VERSION_SCRIPT, test "$have_ld_version_script" = "yes")
+
 ################################
 # Deal with debugging options
 ################################
@@ -38,6 +68,26 @@ AC_ARG_ENABLE(debug,
               [],
               [enable_debug=no])
 AM_CONDITIONAL(DEBUG,test x$enable_debug = xyes)
+
+################################
+# Check for Lua support
+################################
+AC_ARG_WITH(lua,
+            [AS_HELP_STRING([--with-lua=DIR],
+                            [Build Lua ACTION plugin [default=no]])],
+            [use_lua=$withval],
+            [use_lua=no])
+AM_CONDITIONAL(WITH_LUA,test x$use_lua != xno)
+
+if test x$use_lua != xno; then
+    if test x$use_lua != xyes; then
+        CPPFLAGS="${CPPFLAGS} -I$use_lua/include"
+	LDFLAGS="${LDFLAGS} -L$use_lua/lib"
+    fi
+    LUA_VERSION="5.1"
+    AX_LUA_HEADERS()
+    AX_LUA_LIBS()
+fi
 
 ################################
 # Check for the roxml library
@@ -462,6 +512,16 @@ AC_CHECK_HEADERS(grp.h, [],
 ################################
 AC_CHECK_FUNCS(chroot, [],
     AC_MSG_WARN([chroot() not found: the choot is not supported]))
+
+################################
+# Check for dlopen
+################################
+AC_CHECK_HEADERS(dlfcn.h, [
+        AC_SEARCH_LIBS([dlopen], [dl dld], [], [
+          AC_MSG_WARN([unable to find the dlopen() function])
+        ])
+    ],
+    AC_MSG_WARN([dlfcn.h not found: the dl operations is not supported]))
 
 AC_CONFIG_FILES(Makefile)
 AC_OUTPUT

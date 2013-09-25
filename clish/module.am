@@ -2,10 +2,6 @@
 lib_LTLIBRARIES += libclish.la
 
 libclish_la_SOURCES = \
-    clish/callback_access.c \
-    clish/callback_script.c \
-    clish/callback_config.c \
-    clish/callback_log.c \
     clish/private.h
 
 libclish_la_LDFLAGS = @XML_LDFLAGS@
@@ -32,7 +28,8 @@ nobase_include_HEADERS += \
 	clish/action.h \
 	clish/config.h \
 	clish/hotkey.h \
-	clish/internal.h
+	clish/plugin.h \
+	clish/udata.h
 
 EXTRA_DIST += \
 	clish/command/module.am \
@@ -46,6 +43,8 @@ EXTRA_DIST += \
 	clish/action/module.am \
 	clish/config/module.am \
 	clish/hotkey/module.am \
+	clish/plugin/module.am \
+	clish/udata/module.am \
 	clish/README
 
 include $(top_srcdir)/clish/command/module.am
@@ -59,3 +58,5 @@ include $(top_srcdir)/clish/var/module.am
 include $(top_srcdir)/clish/action/module.am
 include $(top_srcdir)/clish/config/module.am
 include $(top_srcdir)/clish/hotkey/module.am
+include $(top_srcdir)/clish/plugin/module.am
+include $(top_srcdir)/clish/udata/module.am

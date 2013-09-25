@@ -1,13 +1,16 @@
 .deps
 .dirstamp
 .libs
+.*.swp
 *.o
 *.lo
 *.la
+*.so
 *~
 
 /autom4te.cache
-/m4
+/m4/libtool.m4
+/m4/lt*
 /aux_scripts
 /config.log
 /config.status

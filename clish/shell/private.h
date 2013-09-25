@@ -1,12 +1,15 @@
 /*
- * shell.h - private interface to the shell class
+ * shell/private.h - private interface to the shell class
  */
 #include "lub/bintree.h"
+#include "lub/list.h"
 #include "tinyrl/tinyrl.h"
 #include "clish/shell.h"
 #include "clish/pargv.h"
 #include "clish/var.h"
 #include "clish/action.h"
+#include "clish/plugin.h"
+#include "clish/udata.h"
 
 /*-------------------------------------
  * PRIVATE TYPES
@@ -38,18 +41,33 @@ typedef struct {
 	lub_bintree_t viewid;
 } clish_shell_pwd_t;
 
+/* Context structure */
+struct clish_context_s {
+	clish_shell_t *shell;
+	const clish_command_t *cmd;
+	clish_pargv_t *pargv;
+	const clish_action_t *action;
+};
+
+/* Shell structure */
 struct clish_shell_s {
-	lub_bintree_t view_tree; /* Maintain a tree of views */
-	lub_bintree_t ptype_tree; /* Maintain a tree of ptypes */
-	lub_bintree_t var_tree; /* Maintain a tree of global variables */
-	const clish_shell_hooks_t *client_hooks; /* Client callback hooks */
-	void *client_cookie; /* Client callback cookie */
+	lub_bintree_t view_tree; /* Tree of views */
+	lub_bintree_t ptype_tree; /* Tree of ptypes */
+	lub_bintree_t var_tree; /* Tree of global variables */
+
+	/* Hooks */
+	clish_sym_t *hooks[CLISH_SYM_TYPE_MAX]; /* Callback hooks */
+	bool_t hooks_use[CLISH_SYM_TYPE_MAX]; /* Is hook defined */
+
 	clish_view_t *global; /* Reference to the global view. */
 	clish_command_t *startup; /* This is the startup command */
 	unsigned int idle_timeout; /* This is the idle timeout */
-	clish_command_t *wdog; /* This is the watchdog command */
-	unsigned int wdog_timeout; /* This is the watchdog timeout */
+
+	/* Watchdog */
+	clish_command_t *wdog; /* Watchdog command */
+	unsigned int wdog_timeout; /* Watchdog timeout */
 	bool_t wdog_active; /* If watchdog is active now */
+
 	clish_shell_state_t state; /* The current state */
 	char *overview; /* Overview text for this shell */
 	tinyrl_t *tinyrl; /* Tiny readline instance */
@@ -61,13 +79,24 @@ struct clish_shell_s {
 	char *lockfile;
 	char *default_shebang;
 	char *fifo_name; /* The name of temporary fifo file. */
+	struct passwd *user; /* Current user information */
+
+	/* Boolean flags */
 	bool_t interactive; /* Is shell interactive. */
 	bool_t log; /* If command logging is enabled */
-	struct passwd *user; /* Current user information */
+	bool_t dryrun; /* Is this a dry-running */
+	bool_t default_plugin; /* Use or not default plugin */
+
+	/* Plugins and symbols */
+	lub_list_t *plugins; /* List of plugins */
+	lub_list_t *syms; /* List of all used symbols. Must be resolved. */
 
 	/* Static params for var expanding. The refactoring is needed. */
 	clish_param_t *param_depth;
 	clish_param_t *param_pwd;
+
+	/* Userdata list holder */
+	lub_list_t *udata;
 };
 
 /**

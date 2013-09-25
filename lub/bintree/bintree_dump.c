@@ -1,6 +1,9 @@
+#ifdef DEBUG
+
 /*
  * bintree_dump.c
  */
+
 #include <stdio.h>
 #include "private.h"
 
@@ -27,3 +30,5 @@ void lub_bintree_dump(lub_bintree_t * this)
 }
 
 /*--------------------------------------------------------- */
+
+#endif /* DEBUG */

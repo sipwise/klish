@@ -9,16 +9,15 @@
 #include <sys/types.h>
 #include <pwd.h>
 
-#include "internal.h"
+#include "clish/shell.h"
 
 #define SYSLOG_IDENT "klish"
 #define SYSLOG_FACILITY LOG_LOCAL0
 
 /*--------------------------------------------------------- */
-int clish_log_callback(clish_context_t *context, const char *line,
-	int retcode)
+CLISH_HOOK_LOG(clish_hook_log)
 {
-	clish_shell_t *this = context->shell;
+	clish_shell_t *this = clish_context__get_shell(clish_context);
 	struct passwd *user = NULL;
 	char *uname = "unknown";
 

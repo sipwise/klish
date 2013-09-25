@@ -1,3 +1,5 @@
+#ifdef DEBUG
+
 /*
  * ptype_dump.c
  */
@@ -20,3 +22,5 @@ void clish_ptype_dump(clish_ptype_t * this)
 }
 
 /*--------------------------------------------------------- */
+
+#endif /* DEBUG */
