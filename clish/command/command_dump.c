@@ -1,3 +1,5 @@
+#ifdef DEBUG
+
 /*
  * command_dump.c
  */
@@ -34,3 +36,5 @@ void clish_command_dump(const clish_command_t * this)
 }
 
 /*--------------------------------------------------------- */
+
+#endif /* DEBUG */

@@ -1,3 +1,5 @@
+#ifdef DEBUG
+
 /*
  * nspace_dump.c
  */
@@ -25,3 +27,5 @@ void clish_nspace_dump(const clish_nspace_t * this)
 }
 
 /*--------------------------------------------------------- */
+
+#endif /* DEBUG */

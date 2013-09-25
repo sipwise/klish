@@ -28,25 +28,11 @@
 #include "lub/list.h"
 #include "lub/system.h"
 #include "clish/shell.h"
-#include "clish/internal.h"
 
 #define QUOTE(t) #t
 /* #define version(v) printf("%s\n", QUOTE(v)) */
 #define version(v) printf("%s\n", v)
 
-/* Hooks */
-static clish_shell_hooks_t my_hooks = {
-    NULL, /* don't worry about init callback */
-    clish_access_callback,
-    NULL, /* don't worry about cmd_line callback */
-    clish_script_callback,
-    NULL, /* don't worry about fini callback */
-    clish_config_callback,
-    clish_log_callback,
-    NULL  /* don't register any builtin functions */
-};
-
-static void sighandler(int signo);
 static void help(int status, const char *argv0);
 
 /*--------------------------------------------------------- */
@@ -65,9 +51,12 @@ int main(int argc, char **argv)
 	bool_t utf8 = BOOL_FALSE;
 	bool_t bit8 = BOOL_FALSE;
 	bool_t log = BOOL_FALSE;
+	bool_t dryrun = BOOL_FALSE;
+	bool_t dryrun_config = BOOL_FALSE;
 	const char *xml_path = getenv("CLISH_PATH");
 	const char *view = getenv("CLISH_VIEW");
 	const char *viewid = getenv("CLISH_VIEWID");
+
 	FILE *outfd = stdout;
 	bool_t istimeout = BOOL_FALSE;
 	int timeout = 0;
@@ -77,6 +66,7 @@ int main(int argc, char **argv)
 	const char *histfile = "~/.clish_history";
 	char *histfile_expanded = NULL;
 	unsigned int histsize = 50;
+	clish_sym_t *sym = NULL;
 
 	/* Signal vars */
 	struct sigaction sigpipe_act;
@@ -113,7 +103,7 @@ int main(int argc, char **argv)
 	sigaddset(&sigpipe_set, SIGPIPE);
 	sigpipe_act.sa_flags = 0;
 	sigpipe_act.sa_mask = sigpipe_set;
-	sigpipe_act.sa_handler = &sighandler;
+	sigpipe_act.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &sigpipe_act, NULL);
 
 #if HAVE_LOCALE_H
@@ -160,7 +150,7 @@ int main(int argc, char **argv)
 			log = BOOL_TRUE;
 			break;
 		case 'd':
-			my_hooks.script_fn = clish_dryrun_callback;
+			dryrun = BOOL_TRUE;
 			break;
 		case 'x':
 			xml_path = optarg;
@@ -173,8 +163,8 @@ int main(int argc, char **argv)
 			break;
 		case 'k':
 			lockless = BOOL_TRUE;
-			my_hooks.script_fn = clish_dryrun_callback;
-			my_hooks.config_fn = NULL;
+			dryrun = BOOL_TRUE;
+			dryrun_config = BOOL_TRUE;
 			break;
 		case 't':
 			istimeout = BOOL_TRUE;
@@ -222,20 +212,21 @@ int main(int argc, char **argv)
 
 	/* Validate command line options */
 	if (utf8 && bit8) {
-		fprintf(stderr, "The -u and -8 options can't be used together.\n");
+		fprintf(stderr, "Error: The -u and -8 options can't be used together.\n");
 		goto end;
 	}
 
 	/* Create shell instance */
 	if (quiet)
 		outfd = fopen("/dev/null", "w");
-	shell = clish_shell_new(&my_hooks, NULL, NULL, outfd, stop_on_error);
+	shell = clish_shell_new(NULL, outfd, stop_on_error);
 	if (!shell) {
-		fprintf(stderr, "Can't run clish.\n");
+		fprintf(stderr, "Error: Can't run clish.\n");
 		goto end;
 	}
 	/* Load the XML files */
-	clish_shell_load_scheme(shell, xml_path);
+	if (clish_shell_load_scheme(shell, xml_path))
+		goto end;
 	/* Set communication to the konfd */
 	clish_shell__set_socket(shell, socket_path);
 	/* Set lockless mode */
@@ -266,6 +257,9 @@ int main(int argc, char **argv)
 	/* Set logging */
 	if (log)
 		clish_shell__set_log(shell, log);
+	/* Set dry-run */
+	if (dryrun)
+		clish_shell__set_dryrun(shell, dryrun);
 	/* Set idle timeout */
 	if (istimeout)
 		clish_shell__set_timeout(shell, timeout);
@@ -275,6 +269,18 @@ int main(int argc, char **argv)
 		histfile_expanded = lub_system_tilde_expand(histfile);
 	if (histfile_expanded)
 		clish_shell__restore_history(shell, histfile_expanded);
+	/* Load plugins */
+	if (clish_shell_load_plugins(shell) < 0)
+		goto end;
+	if (clish_shell_link_plugins(shell) < 0)
+		goto end;
+	/* Dryrun config and log hooks */
+	if (dryrun_config) {
+		if ((sym = clish_shell_get_hook(shell, CLISH_SYM_TYPE_CONFIG)))
+			clish_sym__set_permanent(sym, BOOL_FALSE);
+		if ((sym = clish_shell_get_hook(shell, CLISH_SYM_TYPE_LOG)))
+			clish_sym__set_permanent(sym, BOOL_FALSE);
+	}
 
 	/* Set source of command stream: files or interactive tty */
 	if(optind < argc) {
@@ -291,7 +297,7 @@ int main(int argc, char **argv)
 	/* Execute startup */
 	running = clish_shell_startup(shell);
 	if (running) {
-		fprintf(stderr, "Can't startup clish.\n");
+		fprintf(stderr, "Error: Can't startup clish.\n");
 		goto end;
 	}
 
@@ -375,15 +381,4 @@ static void help(int status, const char *argv0)
 		printf("\t-f <path>, --histfile=<path>\tFile to save command history.\n");
 		printf("\t-z <num>, --histsize=<num>\tCommand history size in lines.\n");
 	}
-}
-
-/*--------------------------------------------------------- */
-/*
- * Signal handler for SIGPIPE.
- * It's empty but it's needed to don't ignore SIGPIPE because
- * SIG_IGN will be inherited while ACTION execution.
- */
-static void sighandler(int signo)
-{
-	return;
 }

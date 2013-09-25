@@ -34,10 +34,10 @@
 #include <grp.h>
 #endif
 
-#include "clish/internal.h"
 #include "konf/tree.h"
 #include "konf/query.h"
 #include "konf/buf.h"
+#include "konf/net.h"
 #include "lub/argv.h"
 #include "lub/string.h"
 

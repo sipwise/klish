@@ -1,3 +1,5 @@
+#ifdef DEBUG
+
 /*
  * pargv_dump.c
  */
@@ -31,3 +33,5 @@ void clish_pargv_dump(const clish_pargv_t * this)
 }
 
 /*--------------------------------------------------------- */
+
+#endif /* DEBUG */

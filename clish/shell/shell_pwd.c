@@ -83,7 +83,7 @@ char *clish_shell__get_pwd_line(const clish_shell_t *this, unsigned int index)
 }
 
 /*--------------------------------------------------------- */
-char *clish_shell__get_pwd_full(const clish_shell_t * this, unsigned depth)
+char *clish_shell__get_pwd_full(const clish_shell_t * this, unsigned int depth)
 {
 	char *pwd = NULL;
 	unsigned i;

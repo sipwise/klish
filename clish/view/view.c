@@ -75,24 +75,22 @@ static void clish_view_fini(clish_view_t * this)
 		clish_command_delete(cmd);
 	}
 
-	/* free our memory */
-	lub_string_free(this->name);
-	this->name = NULL;
-	lub_string_free(this->prompt);
-	this->prompt = NULL;
-
 	/* finalize each of the namespace instances */
 	for (i = 0; i < this->nspacec; i++) {
 		clish_nspace_delete(this->nspacev[i]);
 	}
 
-	/* Free hotkey structures */
-	clish_hotkeyv_delete(this->hotkeys);
-
 	/* free the namespace vector */
 	free(this->nspacev);
 	this->nspacec = 0;
 	this->nspacev = NULL;
+
+	/* Free hotkey structures */
+	clish_hotkeyv_delete(this->hotkeys);
+
+	/* free our memory */
+	lub_string_free(this->name);
+	lub_string_free(this->prompt);
 }
 
 /*---------------------------------------------------------
@@ -198,7 +196,7 @@ clish_command_t *clish_view_resolve_command(clish_view_t *this,
 			(!clish_action__get_builtin(action)) &&
 			(CLISH_CONFIG_NONE == clish_config__get_op(config)) &&
 			(!clish_command__get_param_count(result)) &&
-			(!clish_command__get_view(result))) {
+			(!clish_command__get_viewname(result))) {
 			/* if this doesn't do anything we've
 			 * not resolved a command
 			 */
@@ -258,7 +256,7 @@ static const clish_command_t *find_next_completion(clish_view_t * this,
 		/* Make command link from command alias */
 		cmd = clish_command_alias_to_link(cmd);
 		name = clish_command__get_name(cmd);
-		if (words == lub_argv_wordcount(name)) {
+		if (words == lub_string_wordcount(name)) {
 			/* only bother with commands of which this line is a prefix */
 			/* this is a completion */
 			if (lub_string_nocasestr(name, line) == name)
@@ -400,6 +398,12 @@ int clish_view_insert_hotkey(const clish_view_t *this, const char *key, const ch
 const char *clish_view_find_hotkey(const clish_view_t *this, int code)
 {
 	return clish_hotkeyv_cmd_by_code(this->hotkeys, code);
+}
+
+/*--------------------------------------------------------- */
+lub_bintree_t *clish_view__cmd_tree(clish_view_t *this)
+{
+	return &this->tree;
 }
 
 /*--------------------------------------------------------- */

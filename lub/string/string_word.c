@@ -1,5 +1,5 @@
 /*
- * argv_nextword.c
+ * /lub/string/string_word.c
  */
 #include <stddef.h>
 #include <ctype.h>
@@ -8,8 +8,8 @@
 #include "lub/types.h"
 
 /*--------------------------------------------------------- */
-const char *lub_argv_nextword(const char *string,
-	size_t * len, size_t * offset, size_t * quoted)
+const char *lub_string_nextword(const char *string,
+	size_t *len, size_t *offset, size_t *quoted)
 {
 	const char *word;
 
@@ -60,16 +60,16 @@ const char *lub_argv_nextword(const char *string,
 }
 
 /*--------------------------------------------------------- */
-unsigned lub_argv_wordcount(const char *line)
+unsigned int lub_string_wordcount(const char *line)
 {
 	const char *word;
-	unsigned result = 0;
+	unsigned int result = 0;
 	size_t len = 0, offset = 0;
 	size_t quoted;
 
-	for (word = lub_argv_nextword(line, &len, &offset, &quoted);
+	for (word = lub_string_nextword(line, &len, &offset, &quoted);
 		*word || quoted;
-		word = lub_argv_nextword(word + len, &len, &offset, &quoted)) {
+		word = lub_string_nextword(word + len, &len, &offset, &quoted)) {
 		/* account for the terminating quotation mark */
 		len += quoted ? quoted - 1 : 0;
 		result++;

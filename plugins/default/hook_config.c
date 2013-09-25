@@ -14,14 +14,15 @@
 #include <limits.h>
 #include <string.h>
 
-#include "internal.h"
 #include "konf/net.h"
 #include "konf/buf.h"
 #include "konf/query.h"
 #include "lub/string.h"
+#include "clish/shell.h"
 
 static int send_request(konf_client_t * client, char *command);
 
+/*--------------------------------------------------------- */
 static unsigned short str2ushort(const char *str)
 {
 	unsigned short num = 0;
@@ -45,10 +46,10 @@ static unsigned short str2ushort(const char *str)
 }
 
 /*--------------------------------------------------------- */
-bool_t clish_config_callback(clish_context_t *context)
+CLISH_HOOK_CONFIG(clish_hook_config)
 {
-	clish_shell_t *this = context->shell;
-	const clish_command_t *cmd = context->cmd;
+	clish_shell_t *this = clish_context__get_shell(clish_context);
+	const clish_command_t *cmd = clish_context__get_cmd(clish_context);
 	clish_config_t *config;
 	char *command = NULL;
 	konf_client_t *client;
@@ -80,7 +81,7 @@ bool_t clish_config_callback(clish_context_t *context)
 		lub_string_cat(&command, "-s");
 
 		/* Add entered line */
-		tstr = clish_shell__get_line(context);
+		tstr = clish_shell__get_line(clish_context);
 		str = lub_string_encode(tstr, escape_chars);
 		lub_string_free(tstr);
 		lub_string_cat(&command, " -l \"");
@@ -108,7 +109,7 @@ bool_t clish_config_callback(clish_context_t *context)
 		lub_string_cat(&command, "-d");
 
 		/* Add filename */
-		str = clish_shell_expand(clish_config__get_file(config), SHELL_VAR_ACTION, context);
+		str = clish_shell_expand(clish_config__get_file(config), SHELL_VAR_ACTION, clish_context);
 		if (str) {
 			lub_string_cat(&command, " -f \"");
 			if (str[0] != '\0')
@@ -126,7 +127,7 @@ bool_t clish_config_callback(clish_context_t *context)
 
 	/* Add pattern */
 	if ((CLISH_CONFIG_SET == op) || (CLISH_CONFIG_UNSET == op)) {
-		tstr = clish_shell_expand(clish_config__get_pattern(config), SHELL_VAR_REGEX, context);
+		tstr = clish_shell_expand(clish_config__get_pattern(config), SHELL_VAR_REGEX, clish_context);
 		if (!tstr) {
 			lub_string_free(command);
 			return BOOL_FALSE;
@@ -149,7 +150,7 @@ bool_t clish_config_callback(clish_context_t *context)
 
 	/* Add sequence */
 	if (clish_config__get_seq(config)) {
-		str = clish_shell_expand(clish_config__get_seq(config), SHELL_VAR_ACTION, context);
+		str = clish_shell_expand(clish_config__get_seq(config), SHELL_VAR_ACTION, clish_context);
 		snprintf(tmp, sizeof(tmp) - 1, " -q %u", str2ushort(str));
 		tmp[sizeof(tmp) - 1] = '\0';
 		lub_string_cat(&command, tmp);
@@ -158,7 +159,7 @@ bool_t clish_config_callback(clish_context_t *context)
 
 	/* Add pwd */
 	if (clish_config__get_depth(config)) {
-		str = clish_shell_expand(clish_config__get_depth(config), SHELL_VAR_ACTION, context);
+		str = clish_shell_expand(clish_config__get_depth(config), SHELL_VAR_ACTION, clish_context);
 		num = str2ushort(str);
 		lub_string_free(str);
 	} else {

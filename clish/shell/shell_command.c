@@ -79,9 +79,9 @@ void clish_shell_param_generator(clish_shell_t *this, lub_argv_t *matches,
 	const char *name = clish_command__get_name(cmd);
 	char *text = lub_string_dup(&line[offset]);
 	clish_ptype_t *ptype;
-	unsigned idx = lub_argv_wordcount(name);
+	unsigned idx = lub_string_wordcount(name);
 	/* get the index of the current parameter */
-	unsigned index = lub_argv_wordcount(line) - idx;
+	unsigned index = lub_string_wordcount(line) - idx;
 	clish_context_t context;
 
 	if ((0 != index) || (offset && line[offset - 1] == ' ')) {
@@ -96,9 +96,11 @@ void clish_shell_param_generator(clish_shell_t *this, lub_argv_t *matches,
 			index--;
 
 		/* Parse command line to get completion pargv's */
-		context.shell = this;
-		context.cmd = cmd;
-		context.pargv = pargv;
+		/* Prepare context */
+		clish_context_init(&context, this);
+		clish_context__set_cmd(&context, cmd);
+		clish_context__set_pargv(&context, pargv);
+
 		clish_shell_parse_pargv(pargv, cmd, &context,
 			clish_command__get_paramv(cmd),
 			argv, &idx, completion, index + idx);

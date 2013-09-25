@@ -53,7 +53,7 @@ const char *clish_command__get_escape_chars(const clish_command_t * instance);
 const char *clish_command__get_regex_chars(const clish_command_t * instance);
 const clish_param_t *clish_command__get_args(const clish_command_t * instance);
 clish_action_t *clish_command__get_action(const clish_command_t *instance);
-const char *clish_command__get_view(const clish_command_t *instance);
+char *clish_command__get_viewname(const clish_command_t * instance);
 char *clish_command__get_viewid(const clish_command_t *instance);
 unsigned int clish_command__get_param_count(const clish_command_t * instance);
 const clish_param_t *clish_command__get_param(const clish_command_t * instance,
@@ -65,8 +65,8 @@ void clish_command__set_regex_chars(clish_command_t * instance,
 	const char *escape_chars);
 void clish_command__set_args(clish_command_t * instance, clish_param_t * args);
 void clish_command__set_detail(clish_command_t * instance, const char *detail);
-void clish_command__set_view(clish_command_t *instance, const char *view);
-void clish_command__force_view(clish_command_t *instance, const char *view);
+void clish_command__set_viewname(clish_command_t * instance, const char *viewname);
+void clish_command__force_viewname(clish_command_t * instance, const char *viewname);
 void clish_command__set_viewid(clish_command_t * instance, const char *viewid);
 void clish_command__force_viewid(clish_command_t * instance, const char *viewid);
 void clish_command__set_pview(clish_command_t * instance, clish_view_t * view);

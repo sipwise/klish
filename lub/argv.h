@@ -37,21 +37,6 @@ typedef struct lub_argv_s lub_argv_t;
  * ARGV INTERFACE
  *===================================== */
 /**
- * \pre
- * - none
- *
- * \return
- * The number of space separated words in the specified string.
- *
- * \post
- * - none
- */
-unsigned lub_argv_wordcount(
-	/**
-         * The string to analyse
-         */
-	const char *line);
-/**
  *  This operation is used to construct an instance of this class. The client
  * species a string and an offset within that string, from which to start
  * collecting "words" to place into the vector instance.

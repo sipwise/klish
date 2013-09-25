@@ -9,7 +9,7 @@ if DEBUG
   DEBUG_CFLAGS = -DDEBUG
 endif
 
-AM_CFLAGS = -pedantic -Wall $(DEBUG_CFLAGS)
+AM_CFLAGS = -Wall $(DEBUG_CFLAGS)
 #AM_CFLAGS = -ansi -pedantic -Werror -Wall -D_POSIX_C_SOURCE=199309 -DVERSION=$(VERSION) $(DEBUG_CFLAGS)
 
 bin_PROGRAMS =
@@ -23,6 +23,7 @@ EXTRA_DIST = \
 	lub/module.am \
 	tinyrl/module.am \
 	konf/module.am \
+	plugins/module.am \
 	contrib \
 	xml-examples \
 	debian \
@@ -37,3 +38,4 @@ include $(top_srcdir)/tinyrl/module.am
 include $(top_srcdir)/konf/module.am
 include $(top_srcdir)/clish/module.am
 include $(top_srcdir)/bin/module.am
+include $(top_srcdir)/plugins/module.am

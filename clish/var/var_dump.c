@@ -1,3 +1,5 @@
+#ifdef DEBUG
+
 /*
  * var_dump.c
  */
@@ -22,3 +24,5 @@ void clish_var_dump(const clish_var_t *this)
 }
 
 /*--------------------------------------------------------- */
+
+#endif /* DEBUG */

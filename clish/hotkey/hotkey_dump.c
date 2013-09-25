@@ -1,3 +1,5 @@
+#ifdef DEBUG
+
 /*
  * hotkey_dump.c
  */
@@ -28,3 +30,5 @@ void clish_hotkeyv_dump(const clish_hotkeyv_t *this)
 }
 
 /*--------------------------------------------------------- */
+
+#endif /* DEBUG */

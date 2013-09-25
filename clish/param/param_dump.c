@@ -1,3 +1,5 @@
+#ifdef DEBUG
+
 /*
  * param_dump.c
  */
@@ -50,3 +52,5 @@ void clish_param_dump(const clish_param_t * this)
 }
 
 /*--------------------------------------------------------- */
+
+#endif /* DEBUG */

@@ -1,8 +1,13 @@
 /*
- * clish_script_callback.c
+ * sym_script.c
  *
- * Callback hook to action a shell script.
+ * Function to execute a shell script.
  */
+
+#include "private.h"
+#include "lub/string.h"
+#include "konf/buf.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -15,16 +20,12 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include "lub/string.h"
-#include "konf/buf.h"
-#include "internal.h"
-
 /*--------------------------------------------------------- */
-int clish_script_callback(clish_context_t *context,
-	clish_action_t *action, const char *script, char **out)
+CLISH_PLUGIN_SYM(clish_script)
 {
-	clish_shell_t *this = context->shell;
-	const char * shebang = NULL;
+	clish_shell_t *this = clish_context__get_shell(clish_context);
+	const clish_action_t *action = clish_context__get_action(clish_context);
+	const char *shebang = NULL;
 	pid_t cpid = -1;
 	int res;
 	const char *fifo_name;
@@ -40,7 +41,7 @@ int clish_script_callback(clish_context_t *context,
 
 	assert(this);
 	if (!script) /* Nothing to do */
-		return BOOL_TRUE;
+		return 0;
 
 	/* Find out shebang */
 	if (action)
@@ -61,17 +62,17 @@ int clish_script_callback(clish_context_t *context,
 		/* Get FIFO */
 		fifo_name = clish_shell__get_fifo(this);
 		if (!fifo_name) {
-			fprintf(stderr, "System error. Can't create temporary FIFO.\n"
-				"The ACTION will be not executed.\n");
-			return BOOL_FALSE;
+			fprintf(stderr, "Error: Can't create temporary FIFO.\n"
+				"Error: The ACTION will be not executed.\n");
+			return -1;
 		}
 
 		/* Create process to write to FIFO */
 		cpid = fork();
 		if (cpid == -1) {
-			fprintf(stderr, "System error. Can't fork the write process.\n"
-				"The ACTION will be not executed.\n");
-			return BOOL_FALSE;
+			fprintf(stderr, "Error: Can't fork the write process.\n"
+				"Error: The ACTION will be not executed.\n");
+			return -1;
 		}
 
 		/* Child: write to FIFO */
@@ -110,8 +111,8 @@ int clish_script_callback(clish_context_t *context,
 		/* Execute shebang with FIFO as argument */
 		rpipe = popen(command, "r");
 		if (!rpipe) {
-			fprintf(stderr, "System error. Can't fork the script.\n"
-				"The ACTION will be not executed.\n");
+			fprintf(stderr, "Error: Can't fork the script.\n"
+				"Error: The ACTION will be not executed.\n");
 			lub_string_free(command);
 			if (!is_sh) {
 				kill(cpid, SIGTERM);
@@ -122,7 +123,7 @@ int clish_script_callback(clish_context_t *context,
 			sigaction(SIGINT, &sig_old_int, NULL);
 			sigaction(SIGQUIT, &sig_old_quit, NULL);
 
-			return BOOL_FALSE;
+			return -1;
 		}
 		/* Read the result of script execution */
 		buf = konf_buf_new(fileno(rpipe));
@@ -154,19 +155,6 @@ int clish_script_callback(clish_context_t *context,
 	fprintf(stderr, "RETCODE: %d\n", WEXITSTATUS(res));
 #endif /* DEBUG */
 	return WEXITSTATUS(res);
-}
-
-/*--------------------------------------------------------- */
-int clish_dryrun_callback(clish_context_t *context,
-	clish_action_t *action, const char *script, char ** out)
-{
-#ifdef DEBUG
-	fprintf(stderr, "DRY-RUN: %s\n", script);
-#endif /* DEBUG */
-	if (out)
-		*out = NULL;
-
-	return 0;
 }
 
 /*--------------------------------------------------------- */

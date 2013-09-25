@@ -1,0 +1,6 @@
+liblub_la_SOURCES += \
+	lub/ini/pair.c \
+	lub/ini/ini.c
+
+
+

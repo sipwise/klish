@@ -17,8 +17,3 @@ struct lub_argv_s {
 	unsigned argc;
 	lub_arg_t *argv;
 };
-/*-------------------------------------
- * PRIVATE META FUNCTIONS
- *------------------------------------- */
-const char *lub_argv_nextword(const char *string,
-	size_t * len, size_t * offset, size_t * quoted);

@@ -21,7 +21,7 @@ static void lub_argv_init(lub_argv_t * this, const char *line, size_t offset)
 	if (!line)
 		return;
 	/* first of all count the words in the line */
-	this->argc = lub_argv_wordcount(line);
+	this->argc = lub_string_wordcount(line);
 	if (0 == this->argc)
 		return;
 	/* allocate space to hold the vector */
@@ -29,9 +29,9 @@ static void lub_argv_init(lub_argv_t * this, const char *line, size_t offset)
 	assert(arg);
 
 	/* then fill out the array with the words */
-	for (word = lub_argv_nextword(line, &len, &offset, &quoted);
+	for (word = lub_string_nextword(line, &len, &offset, &quoted);
 		*word || quoted;
-		word = lub_argv_nextword(word + len, &len, &offset, &quoted)) {
+		word = lub_string_nextword(word + len, &len, &offset, &quoted)) {
 		(*arg).arg = lub_string_ndecode(word, len);
 		(*arg).offset = offset;
 		(*arg).quoted = quoted ? BOOL_TRUE : BOOL_FALSE;

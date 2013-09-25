@@ -1,0 +1,24 @@
+lib_LTLIBRARIES+= clish_plugin_default.la
+clish_plugin_default_la_SOURCES =
+clish_plugin_default_la_LIBADD = \
+	libclish.la \
+	libkonf.la \
+	liblub.la
+clish_plugin_default_la_DEPENDENCIES = \
+	libclish.la \
+	libkonf.la \
+	liblub.la
+
+clish_plugin_default_la_LDFLAGS	 = -avoid-version -module -shared
+#clish_plugin_default_la_LDFLAGS	+= -export-symbols-regex "^clish_plugin_lua_"
+
+nobase_include_HEADERS += \
+	plugins/default/private.h
+
+clish_plugin_default_la_SOURCES += \
+	plugins/default/builtin_init.c \
+	plugins/default/hook_access.c \
+	plugins/default/hook_config.c \
+	plugins/default/hook_log.c \
+	plugins/default/sym_misc.c \
+	plugins/default/sym_script.c

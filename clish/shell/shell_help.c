@@ -42,8 +42,8 @@ static int available_params(clish_shell_t *this,
 	clish_help_t *help, const clish_command_t *cmd,
 	const char *line, size_t *max_width)
 {
-	unsigned index = lub_argv_wordcount(line);
-	unsigned idx = lub_argv_wordcount(clish_command__get_name(cmd));
+	unsigned index = lub_string_wordcount(line);
+	unsigned idx = lub_string_wordcount(clish_command__get_name(cmd));
 	lub_argv_t *argv;
 	clish_pargv_t *completion, *pargv;
 	unsigned i;
@@ -63,9 +63,12 @@ static int available_params(clish_shell_t *this,
 	/* get the parameter definition */
 	completion = clish_pargv_new();
 	pargv = clish_pargv_new();
-	context.shell = this;
-	context.cmd = cmd;
-	context.pargv = pargv;
+
+	/* Prepare context */
+	clish_context_init(&context, this);
+	clish_context__set_cmd(&context, cmd);
+	clish_context__set_pargv(&context, pargv);
+
 	status = clish_shell_parse_pargv(pargv, cmd, &context,
 		clish_command__get_paramv(cmd),
 		argv, &idx, completion, index);

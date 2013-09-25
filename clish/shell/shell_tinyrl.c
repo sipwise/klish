@@ -27,8 +27,7 @@ static void clish_shell_renew_prompt(clish_shell_t *this)
 	char *str = NULL;
 
 	/* Create appropriate context */
-	memset(&prompt_context, 0, sizeof(prompt_context));
-	prompt_context.shell = this;
+	clish_context_init(&prompt_context, this);
 
 	/* Obtain the prompt */
 	view = clish_shell__get_view(this);
@@ -44,7 +43,7 @@ static void clish_shell_renew_prompt(clish_shell_t *this)
 }
 
 /*-------------------------------------------------------- */
-static bool_t clish_shell_tinyrl_key_help(tinyrl_t * this, int key)
+static bool_t clish_shell_tinyrl_key_help(tinyrl_t *this, int key)
 {
 	bool_t result = BOOL_TRUE;
 
@@ -54,9 +53,9 @@ static bool_t clish_shell_tinyrl_key_help(tinyrl_t * this, int key)
 	} else {
 		/* get the context */
 		clish_context_t *context = tinyrl__get_context(this);
-
+		clish_shell_t *shell = clish_context__get_shell(context);
 		tinyrl_crlf(this);
-		clish_shell_help(context->shell, tinyrl__get_line(this));
+		clish_shell_help(shell, tinyrl__get_line(this));
 		tinyrl_crlf(this);
 		tinyrl_reset_line_state(this);
 	}
@@ -71,7 +70,7 @@ static bool_t clish_shell_tinyrl_key_help(tinyrl_t * this, int key)
 /*
  * Expand the current line with any history substitutions
  */
-static clish_pargv_status_t clish_shell_tinyrl_expand(tinyrl_t * this)
+static clish_pargv_status_t clish_shell_tinyrl_expand(tinyrl_t *this)
 {
 	clish_pargv_status_t status = CLISH_LINE_OK;
 	int rtn;
@@ -116,9 +115,8 @@ static clish_pargv_status_t clish_shell_tinyrl_expand(tinyrl_t * this)
  * If it is a recognisable prefix then possible completions are displayed
  * or a unique completion is inserted.
  */
-static tinyrl_match_e clish_shell_tinyrl_complete(tinyrl_t * this)
+static tinyrl_match_e clish_shell_tinyrl_complete(tinyrl_t *this)
 {
-/*	context_t *context = tinyrl__get_context(this); */
 	tinyrl_match_e status;
 
 	/* first of all perform any history expansion */
@@ -146,11 +144,12 @@ static tinyrl_match_e clish_shell_tinyrl_complete(tinyrl_t * this)
 }
 
 /*--------------------------------------------------------- */
-static bool_t clish_shell_tinyrl_key_space(tinyrl_t * this, int key)
+static bool_t clish_shell_tinyrl_key_space(tinyrl_t *this, int key)
 {
 	bool_t result = BOOL_FALSE;
 	tinyrl_match_e status;
 	clish_context_t *context = tinyrl__get_context(this);
+	clish_shell_t *shell = clish_context__get_shell(context);
 	const char *line = tinyrl__get_line(this);
 	clish_pargv_status_t arg_status;
 	const clish_command_t *cmd = NULL;
@@ -166,8 +165,7 @@ static bool_t clish_shell_tinyrl_key_space(tinyrl_t * this, int key)
 		/* Find out if current line is legal. It can be
 		 * fully completed or partially completed.
 		 */
-		arg_status = clish_shell_parse(context->shell,
-			line, &cmd, &pargv);
+		arg_status = clish_shell_parse(shell, line, &cmd, &pargv);
 		if (pargv)
 			clish_pargv_delete(pargv);
 		switch (arg_status) {
@@ -218,17 +216,18 @@ static bool_t clish_shell_tinyrl_key_space(tinyrl_t * this, int key)
 static bool_t clish_shell_tinyrl_key_enter(tinyrl_t *this, int key)
 {
 	clish_context_t *context = tinyrl__get_context(this);
+	clish_shell_t *shell = clish_context__get_shell(context);
 	const clish_command_t *cmd = NULL;
 	const char *line = tinyrl__get_line(this);
 	bool_t result = BOOL_FALSE;
 	char *errmsg = NULL;
 
 	/* Inc line counter */
-	if (context->shell->current_file)
-		context->shell->current_file->line++;
+	if (shell->current_file)
+		shell->current_file->line++;
 
 	/* Renew prompt */
-	clish_shell_renew_prompt(context->shell);
+	clish_shell_renew_prompt(shell);
 
 	/* nothing to pass simply move down the screen */
 	if (!*line) {
@@ -238,7 +237,7 @@ static bool_t clish_shell_tinyrl_key_enter(tinyrl_t *this, int key)
 	}
 
 	/* try and parse the command */
-	cmd = clish_shell_resolve_command(context->shell, line);
+	cmd = clish_shell_resolve_command(shell, line);
 	if (!cmd) {
 		tinyrl_match_e status = clish_shell_tinyrl_complete(this);
 		switch (status) {
@@ -250,7 +249,7 @@ static bool_t clish_shell_tinyrl_key_enter(tinyrl_t *this, int key)
 			 */
 			line = tinyrl__get_line(this);
 			/* get the command to parse? */
-			cmd = clish_shell_resolve_command(context->shell, line);
+			cmd = clish_shell_resolve_command(shell, line);
 			/*
 			 * We have had a match but it is not a command
 			 * so add a space so as not to confuse the user
@@ -272,7 +271,7 @@ static bool_t clish_shell_tinyrl_key_enter(tinyrl_t *this, int key)
 		clish_pargv_status_t arg_status;
 		tinyrl_multi_crlf(this);
 		/* we've got a command so check the syntax */
-		arg_status = clish_shell_parse(context->shell,
+		arg_status = clish_shell_parse(shell,
 			line, &context->cmd, &context->pargv);
 		switch (arg_status) {
 		case CLISH_LINE_OK:
@@ -298,16 +297,15 @@ static bool_t clish_shell_tinyrl_key_enter(tinyrl_t *this, int key)
 	}
 	/* If error then print message */
 	if (errmsg) {
-		if (tinyrl__get_isatty(this) ||
-			!context->shell->current_file) {
+		if (tinyrl__get_isatty(this) || !shell->current_file) {
 			fprintf(stderr, "Syntax error: %s\n", errmsg);
 			tinyrl_reset_line_state(this);
 		} else {
 			char *fname = "stdin";
-			if (context->shell->current_file->fname)
-				fname = context->shell->current_file->fname;
+			if (shell->current_file->fname)
+				fname = shell->current_file->fname;
 			fprintf(stderr, "Syntax error on line %s:%u \"%s\": "
-			"%s\n", fname, context->shell->current_file->line,
+			"%s\n", fname, shell->current_file->line,
 			line, errmsg);
 		}
 	}
@@ -323,7 +321,7 @@ static bool_t clish_shell_tinyrl_hotkey(tinyrl_t *this, int key)
 	clish_view_t *view;
 	const char *cmd = NULL;
 	clish_context_t *context = tinyrl__get_context(this);
-	clish_shell_t *shell = context->shell;
+	clish_shell_t *shell = clish_context__get_shell(context);
 	int i;
 	char *tmp = NULL;
 
@@ -359,7 +357,7 @@ char **clish_shell_tinyrl_completion(tinyrl_t * tinyrl,
 {
 	lub_argv_t *matches;
 	clish_context_t *context = tinyrl__get_context(tinyrl);
-	clish_shell_t *this = context->shell;
+	clish_shell_t *this = clish_context__get_shell(context);
 	clish_shell_iterator_t iter;
 	const clish_command_t *cmd = NULL;
 	char *text;
@@ -490,9 +488,7 @@ static int clish_shell_execline(clish_shell_t *this, const char *line, char **ou
 	clish_shell_renew_prompt(this);
 
 	/* Set up the context for tinyrl */
-	context.cmd = NULL;
-	context.pargv = NULL;
-	context.shell = this;
+	clish_context_init(&context, this);
 
 	/* Push the specified line or interactive line */
 	if (line)
@@ -520,9 +516,6 @@ static int clish_shell_execline(clish_shell_t *this, const char *line, char **ou
 		history = tinyrl__get_history(this->tinyrl);
 		tinyrl_history_add(history, str);
 	}
-	/* Let the client know the command line has been entered */
-	if (this->client_hooks->cmd_line_fn)
-		this->client_hooks->cmd_line_fn(&context, str);
 	free(str);
 
 	/* Execute the provided command */

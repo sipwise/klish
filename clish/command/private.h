@@ -14,7 +14,7 @@ struct clish_command_s {
 	clish_paramv_t *paramv;
 	clish_action_t *action;
 	clish_config_t *config;
-	char *view;
+	char *viewname;
 	char *viewid;
 	char *detail;
 	char *escape_chars;
