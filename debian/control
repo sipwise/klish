@@ -1,6 +1,6 @@
 Source: klish
-Maintainer: Nixus Networks <debian@nixus.es>
-Uploaders: Nixus Networks <debian@nixus.es>
+Maintainer: Sipwise Development Team <support@sipwise.com>
+Uploader: Victor Seva <vseva@sipwise.com>
 Section: shells
 Priority: extra
 Standards-Version: 3.9.3

@@ -1,7 +1,7 @@
 klish (1.6.6+20130925+git6186ff-1) unstable; urgency=low
 
   * New upstream version.
-  * Cleaning packaging rules. 
+  * Cleaning packaging rules.
 
  -- Victor Seva <vseva@sipwise.com>  Mon, 23 Sep 2013 22:06:45 +0200
 
