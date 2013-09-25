@@ -1,3 +1,2 @@
-contrib/debian/clish/*	etc/clish/
 usr/bin/*
 usr/lib/*.so.*

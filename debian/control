@@ -12,13 +12,28 @@ Homepage: http://www.nixus.es
 
 Package: klish
 Architecture: any
-Depends: libexpat1, ${shlibs:Depends}, ${misc:Depends}
+Depends: libexpat1,
+         klish-default-config | klish-config,
+         ${shlibs:Depends},
+         ${misc:Depends}
 Description: command line interface shell
  The klish is a framework for implementing a CISCO-like CLI on a UNIX systems.
  It is configurable by XML files.
 
 Package: klish-dev
 Architecture: any
-Depends: klish, ${shlibs:Depends}, ${misc:Depends}
+Depends: klish,
+         ${shlibs:Depends},
+         ${misc:Depends}
 Description: development files for klish
  This package contains the development files for klish.
+
+Package: klish-default-config
+Provides: klish-config
+Architecture: any
+Depends: klish,
+         ${shlibs:Depends},
+         ${misc:Depends}
+Description: default config files for klish
+ The klish is a framework for implementing a CISCO-like CLI on a UNIX systems.
+ It is configurable by XML files.
