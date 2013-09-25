@@ -6,7 +6,7 @@ Files: *
 Copyright: 2005 3Com Corporation,
            2005, 2006 Newport Networks Ltd
            2010 Serj Kalichev <serj.kalichev@gmail.com>
-Licence: BSD-3-clause
+License: BSD-3-clause
 
 Files: debian/*
 Copyright: 2013 SipWise Team <development@sipwise.com>,
