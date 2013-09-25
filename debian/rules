@@ -18,7 +18,8 @@ override_dh_autoreconf:
 	./autogen.sh
 
 override_dh_auto_configure:
-	./configure --prefix=/usr --with-lua
+	./configure --prefix=/usr --libdir=/usr/lib/clish \
+				--includedir=/usr/include/clish --with-lua
 
 override_dh_installinit:
 	dh_installinit --name=konfd -pklish
