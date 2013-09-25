@@ -4,7 +4,10 @@ Uploaders: Nixus Networks <debian@nixus.es>
 Section: shells
 Priority: extra
 Standards-Version: 3.9.3
-Build-Depends: debhelper (>= 9~), dh-autoreconf, libexpat1-dev
+Build-Depends: debhelper (>= 9~),
+               dh-autoreconf,
+               libexpat1-dev,
+               liblua5.1-0-dev
 Homepage: http://www.nixus.es
 
 Package: klish
