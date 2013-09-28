@@ -1,0 +1,174 @@
+From 6ef6c5fac4a8b09fb87e2c6015d9376658354c6a Mon Sep 17 00:00:00 2001
+From: Victor Seva <vseva@sipwise.com>
+Date: Sat, 28 Sep 2013 17:22:54 +0200
+Subject: [PATCH] Add shebang to lua plugin. No default shebang. Default is
+ lua!
+
+---
+ plugins/lua/lua_action.c |  132 ++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 132 insertions(+)
+
+diff --git a/plugins/lua/lua_action.c b/plugins/lua/lua_action.c
+index a9b44c6..7d5aba6 100644
+--- a/plugins/lua/lua_action.c
++++ b/plugins/lua/lua_action.c
+@@ -1,6 +1,8 @@
+ #include <stdlib.h>
+ #include <sys/wait.h>
+ #include <unistd.h>
++#include <assert.h>
++#include <string.h>
+ 
+ #include <konf/buf.h>
+ #include <lub/string.h>
+@@ -22,17 +24,147 @@ static int exec_action(lua_State *L, const char *script)
+ 	return res;
+ }
+ 
++static int exec_shebang(clish_shell_t *shell,
++	const char *shebang, const char *script,
++	char **out)
++{
++	pid_t cpid = -1;
++	int res;
++	const char *fifo_name;
++	FILE *rpipe, *wpipe;
++	char *command = NULL;
++	bool_t is_sh = BOOL_FALSE;
++
++	/* Signal vars */
++	struct sigaction sig_old_int;
++	struct sigaction sig_old_quit;
++	struct sigaction sig_new;
++	sigset_t sig_set;
++
++#ifdef DEBUG
++	fprintf(stderr, "SHEBANG: #!%s\n", shebang);
++	fprintf(stderr, "SCRIPT: %s\n", script);
++#endif /* DEBUG */
++
++	/* If /bin/sh we don't need FIFO */
++	if (!is_sh) {
++		/* Get FIFO */
++		fifo_name = clish_shell__get_fifo(shell);
++		if (!fifo_name) {
++			fprintf(stderr, "Error: Can't create temporary FIFO.\n"
++				"Error: The ACTION will be not executed.\n");
++			return -1;
++		}
++		/* Create process to write to FIFO */
++		cpid = fork();
++		if (cpid == -1) {
++			fprintf(stderr, "Error: Can't fork the write process.\n"
++				"Error: The ACTION will be not executed.\n");
++			return -1;
++		}
++
++		/* Child: write to FIFO */
++		if (cpid == 0) {
++			wpipe = fopen(fifo_name, "w");
++			if (!wpipe)
++				_exit(-1);
++			fwrite(script, strlen(script) + 1, 1, wpipe);
++			fclose(wpipe);
++			_exit(0);
++		}
++	}
++
++	/* Parent */
++	/* Prepare command */
++	if (!is_sh) {
++		lub_string_cat(&command, shebang);
++		lub_string_cat(&command, " ");
++		lub_string_cat(&command, fifo_name);
++	} else {
++		lub_string_cat(&command, script);
++	}
++
++	/* If the stdout of script is needed */
++	if (*out) {
++		konf_buf_t *buf;
++
++		/* Ignore SIGINT and SIGQUIT */
++		sigemptyset(&sig_set);
++		sig_new.sa_flags = 0;
++		sig_new.sa_mask = sig_set;
++		sig_new.sa_handler = SIG_IGN;
++		sigaction(SIGINT, &sig_new, &sig_old_int);
++		sigaction(SIGQUIT, &sig_new, &sig_old_quit);
++
++		/* Execute shebang with FIFO as argument */
++		rpipe = popen(command, "r");
++		if (!rpipe) {
++			fprintf(stderr, "Error: Can't fork the script.\n"
++				"Error: The ACTION will be not executed.\n");
++			lub_string_free(command);
++			if (!is_sh) {
++				kill(cpid, SIGTERM);
++				waitpid(cpid, NULL, 0);
++			}
++
++			/* Restore SIGINT and SIGQUIT */
++			sigaction(SIGINT, &sig_old_int, NULL);
++			sigaction(SIGQUIT, &sig_old_quit, NULL);
++
++			return -1;
++		}
++		/* Read the result of script execution */
++		buf = konf_buf_new(fileno(rpipe));
++		while (konf_buf_read(buf) > 0);
++		*out = konf_buf__dup_line(buf);
++		konf_buf_delete(buf);
++		/* Wait for the writing process */
++		if (!is_sh) {
++			kill(cpid, SIGTERM);
++			waitpid(cpid, NULL, 0);
++		}
++		/* Wait for script */
++		res = pclose(rpipe);
++
++		/* Restore SIGINT and SIGQUIT */
++		sigaction(SIGINT, &sig_old_int, NULL);
++		sigaction(SIGQUIT, &sig_old_quit, NULL);
++	} else {
++		res = system(command);
++		/* Wait for the writing process */
++		if (!is_sh) {
++			kill(cpid, SIGTERM);
++			waitpid(cpid, NULL, 0);
++		}
++	}
++	lub_string_free(command);
++
++#ifdef DEBUG
++	fprintf(stderr, "RETCODE: %d\n", WEXITSTATUS(res));
++#endif /* DEBUG */
++
++	return WEXITSTATUS(res);
++}
++
+ CLISH_PLUGIN_SYM(clish_plugin_lua_action)
+ {
+ 	clish_shell_t *shell = clish_context__get_shell(clish_context);
++	const clish_action_t *action = clish_context__get_action(clish_context);
+ 	lua_State *L = clish_shell__get_udata(shell, LUA_UDATA);
+ 	konf_buf_t *buf;
+ 	pid_t childpid;
+ 	int res = 0, fd[2];
++	const char *shebang = NULL;
+ 
+ 	if (!script) /* Nothing to do */
+ 		return (0);
+ 
++	/* Find out shebang */
++	if (action)
++		shebang = clish_action__get_shebang(action);
++	if (shebang)
++		return exec_shebang(shell, shebang, script, &out);
++
+ 	if (!out) /* Handle trivial case */
+ 		return exec_action(L, script);
+ 
+-- 
+1.7.10.4
+
