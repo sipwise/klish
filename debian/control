@@ -3,7 +3,7 @@ Maintainer: Sipwise Development Team <support@sipwise.com>
 Uploaders: Victor Seva <vseva@sipwise.com>
 Section: shells
 Priority: extra
-Standards-Version: 3.9.3
+Standards-Version: 3.9.5
 Build-Depends: debhelper (>= 9~),
                dh-autoreconf,
                libexpat1-dev,
@@ -13,8 +13,8 @@ Homepage: http://www.nixus.es
 Package: klish
 Architecture: any
 Depends: libexpat1,
-         ${shlibs:Depends},
-         ${misc:Depends}
+         ${misc:Depends},
+         ${shlibs:Depends}
 Description: command line interface shell
  The klish is a framework for implementing a CISCO-like CLI on a UNIX systems.
  It is configurable by XML files.
@@ -22,7 +22,7 @@ Description: command line interface shell
 Package: klish-dev
 Architecture: any
 Depends: klish,
-         ${shlibs:Depends},
-         ${misc:Depends}
+         ${misc:Depends},
+         ${shlibs:Depends}
 Description: development files for klish
  This package contains the development files for klish.
