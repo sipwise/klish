@@ -1,3 +1,9 @@
+klish (1.6.6+20130925+git6186ff-1+0~mr3.3.2.0) unstable; urgency=low
+
+  * New release.
+
+ -- Sipwise Jenkins Builder <jenkins@sipwise.com>  Thu, 19 Jun 2014 07:19:22 +0200
+
 klish (1.6.6+20130925+git6186ff-1+0~mr3.3.1.0) unstable; urgency=low
 
   [ Michael Prokop ]
