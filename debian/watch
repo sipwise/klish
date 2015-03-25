@@ -1,0 +1,3 @@
+version=3
+http://libcode.org/projects/klish/files /attachments/download/\d+/klish-([\d.]+)\.(?:zip|tgz|tbz2|txz|tar\.(?:gz|bz2|xz))
+
