@@ -13,7 +13,7 @@ void clish_hotkey_dump(const clish_hotkey_t *this)
 
 	lub_dump_indent();
 	lub_dump_printf("key : %d\n", this->code);
-	lub_dump_printf("cmd : %s\n", this->cmd);
+	lub_dump_printf("cmd : %s\n", LUB_DUMP_STR(this->cmd));
 	lub_dump_undent();
 }
 

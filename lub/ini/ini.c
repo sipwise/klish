@@ -99,7 +99,7 @@ const char *lub_ini_find(const lub_ini_t *this, const char *name)
 int lub_ini_parse_str(lub_ini_t *this, const char *ini)
 {
 	char *buffer;
-	char *saveptr;
+	char *saveptr = NULL;
 	char *line;
 
 	buffer = lub_string_dup(ini);
@@ -130,8 +130,12 @@ int lub_ini_parse_str(lub_ini_t *this, const char *ini)
 		value = strtok_r(NULL, "=", &savestr);
 		begin = lub_string_nextword(name, &len, &offset, &quoted);
 		rname = lub_string_dupn(begin, len);
-		begin = lub_string_nextword(value, &len, &offset, &quoted);
-		rvalue = lub_string_dupn(begin, len);
+		if (!value) /* Empty value */
+			rvalue = NULL;
+		else {
+			begin = lub_string_nextword(value, &len, &offset, &quoted);
+			rvalue = lub_string_dupn(begin, len);
+		}
 		pair = lub_pair_new(rname, rvalue);
 		lub_ini_add(this, pair);
 		lub_string_free(rname);
@@ -144,14 +148,52 @@ int lub_ini_parse_str(lub_ini_t *this, const char *ini)
 }
 
 /*--------------------------------------------------------- */
+int lub_ini_parse_file(lub_ini_t *this, const char *fn)
+{
+	int ret = -1;
+	FILE *f;
+	char *buf;
+	unsigned int p = 0;
+	const int chunk_size = 128;
+	int size = chunk_size;
 
+	if (!fn || !*fn)
+		return -1;
+	f = fopen(fn, "r");
+	if (!f)
+		return -1;
+
+	buf = malloc(size);
+	while (fgets(buf + p, size - p, f)) {
+		char *tmp;
+		if (feof(f) || strchr(buf + p, '\n') || strchr(buf + p, '\r')) {
+			lub_ini_parse_str(this, buf);
+			p = 0;
+			continue;
+		}
+		p = size - 1;
+		size += chunk_size;
+		tmp = realloc(buf, size);
+		if (!tmp)
+			goto error;
+		buf = tmp;
+	}
+
+	ret = 0;
+error:
+	free(buf);
+	fclose(f);
+
+	return ret;
+}
+
+/*--------------------------------------------------------- */
 lub_ini_node_t *lub_ini__get_head(lub_ini_t *this)
 {
 	return lub_list__get_head(this->list);
 }
 
 /*--------------------------------------------------------- */
-
 lub_ini_node_t *lub_ini__get_tail(lub_ini_t *this)
 {
 	return lub_list__get_tail(this->list);

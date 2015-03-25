@@ -241,7 +241,8 @@ int clish_xmlnode_get_name(clish_xmlnode_t *node, char *name,
 	rlen = strlen((char*)n->name) + 1;
 	
 	if (rlen <= *namelen) {
-		sprintf(name, "%s", (char*)n->name);
+		snprintf(name, *namelen, "%s", (char*)n->name);
+		name[*namelen - 1] = '\0';
 		return 0;
 	} else {
 		*namelen = rlen;

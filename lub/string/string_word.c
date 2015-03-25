@@ -15,17 +15,12 @@ const char *lub_string_nextword(const char *string,
 
 	*quoted = 0;
 
-	/* find the start of a word (not including an opening quote) */
+	/* Find the start of a word (not including an opening quote) */
 	while (*string && isspace(*string)) {
 		string++;
 		(*offset)++;
 	}
-	if (*string == '\\') {
-		string++;
-		if (*string)
-			string++;
-	}
-	/* is this the start of a quoted string ? */
+	/* Is this the start of a quoted string ? */
 	if (*string == '"') {
 		*quoted = 1;
 		string++;
@@ -33,7 +28,7 @@ const char *lub_string_nextword(const char *string,
 	word = string;
 	*len = 0;
 
-	/* find the end of the word */
+	/* Find the end of the word */
 	while (*string) {
 		if (*string == '\\') {
 			string++;
@@ -44,11 +39,11 @@ const char *lub_string_nextword(const char *string,
 			}
 			continue;
 		}
-		/* end of word */
+		/* End of word */
 		if (!*quoted && isspace(*string))
 			break;
 		if (*string == '"') {
-			/* end of a quoted string */
+			/* End of a quoted string */
 			*quoted = 2;
 			break;
 		}

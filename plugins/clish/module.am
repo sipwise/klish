@@ -1,0 +1,22 @@
+lib_LTLIBRARIES+= clish_plugin_clish.la
+clish_plugin_clish_la_SOURCES =
+clish_plugin_clish_la_DEPENDENCIES = \
+	libclish.la \
+	libkonf.la \
+	liblub.la \
+	libtinyrl.la
+clish_plugin_clish_la_LIBADD = \
+	$(clish_plugin_clish_la_DEPENDENCIES)
+
+clish_plugin_clish_la_LDFLAGS	 = -avoid-version -module
+#clish_plugin_clish_la_LDFLAGS	 = -avoid-version -module -shared
+#clish_plugin_clish_la_LDFLAGS	+= -export-symbols-regex "^clish_plugin_lua_"
+
+clish_plugin_clish_la_SOURCES += \
+	plugins/clish/builtin_init.c \
+	plugins/clish/hook_access.c \
+	plugins/clish/hook_config.c \
+	plugins/clish/hook_log.c \
+	plugins/clish/sym_misc.c \
+	plugins/clish/sym_script.c \
+	plugins/clish/private.h

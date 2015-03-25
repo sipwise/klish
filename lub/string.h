@@ -37,6 +37,7 @@ If a "const char *" is returned then the client has no responsiblity for releasi
 #include "lub/types.h"
 
 #define UTF8_MASK 0xC0
+#define UTF8_7BIT_MASK 0x80 /* One byte or multibyte */
 #define UTF8_11   0xC0 /* First UTF8 byte */
 #define UTF8_10   0x80 /* Next UTF8 bytes */
 

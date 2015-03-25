@@ -21,6 +21,143 @@
 #include "private.h"
 
 /*-------------------------------------------------------- */
+static int utf8_wchar(const char *sp, unsigned long *sym_out)
+{
+	int i = 0;
+	int l = 0; /* Number of 0x10 UTF sequence bytes */
+	unsigned long sym = 0;
+	const unsigned char *p = (const unsigned char *)sp;
+
+	if (sym_out)
+		*sym_out = *p;
+
+	if (!*p)
+		return 0;
+
+	/* Check for first byte of UTF-8 */
+	if (!(*p & 0xc0))
+		return 1;
+
+	/* Analyze first byte */
+	if ((*p & 0xe0) == 0xc0) {
+		l = 1;
+		sym = (*p & 0x1f);
+	} else if ((*p & 0xf0) == 0xe0) {
+		l = 2;
+		sym = (*p & 0xf);
+	} else if ((*p & 0xf8) == 0xf0) {
+		l = 3;
+		sym = (*p & 7);
+	} else if ((*p & 0xfc) == 0xf8) {
+		l = 4;
+		sym = (*p & 3);
+	} else if ((*p & 0xfe) == 0xfc) {
+		l = 5;
+		sym = (*p & 1);
+	} else {
+		return 1;
+	}
+	p++;
+
+	/* Analyze next UTF-8 bytes */
+	for (i = 0; i < l; i++) {
+		sym <<= 6;
+		/* Check if it's really UTF-8 bytes */
+		if ((*p & 0xc0) != 0x80)
+			return 1;
+		sym |= (*p & 0x3f);
+		p++;
+	}
+
+	if (sym_out)
+		*sym_out = sym;
+	return (l + 1);
+}
+
+/*-------------------------------------------------------- */
+static int utf8_is_cjk(unsigned long sym)
+{
+	if (sym < 0x1100) /* Speed up for non-CJK chars */
+		return 0;
+
+	if (sym >= 0x1100 && sym <= 0x11FF) /* Hangul Jamo */
+		return 1;
+#if 0
+	if (sym >=0x2E80 && sym <= 0x2EFF) /* CJK Radicals Supplement */
+		return 1;
+	if (sym >=0x2F00 && sym <= 0x2FDF) /* Kangxi Radicals */
+		return 1;
+	if (sym >= 0x2FF0 && sym <= 0x2FFF) /* Ideographic Description Characters */
+		return 1;
+	if (sym >= 0x3000 && sym < 0x303F) /* CJK Symbols and Punctuation. The U+303f is half space */
+		return 1;
+	if (sym >= 0x3040 && sym <= 0x309F) /* Hiragana */
+		return 1;
+	if (sym >= 0x30A0 && sym <=0x30FF) /* Katakana */
+		return 1;
+	if (sym >= 0x3100 && sym <=0x312F) /* Bopomofo */
+		return 1;
+	if (sym >= 0x3130 && sym <= 0x318F) /* Hangul Compatibility Jamo */
+		return 1;
+	if (sym >= 0x3190 && sym <= 0x319F) /* Kanbun */
+		return 1;
+	if (sym >= 0x31A0 && sym <= 0x31BF) /* Bopomofo Extended */
+		return 1;
+	if (sym >= 0x31C0 && sym <= 0x31EF) /* CJK strokes */
+		return 1;
+	if (sym >= 0x31F0 && sym <= 0x31FF) /* Katakana Phonetic Extensions */
+		return 1;
+	if (sym >= 0x3200 && sym <= 0x32FF) /* Enclosed CJK Letters and Months */
+		return 1;
+	if (sym >= 0x3300 && sym <= 0x33FF) /* CJK Compatibility */
+		return 1;
+	if (sym >= 0x3400 && sym <= 0x4DBF) /* CJK Unified Ideographs Extension A */
+		return 1;
+	if (sym >= 0x4DC0 && sym <= 0x4DFF) /* Yijing Hexagram Symbols */
+		return 1;
+	if (sym >= 0x4E00 && sym <= 0x9FFF) /* CJK Unified Ideographs */
+		return 1;
+	if (sym >= 0xA000 && sym <= 0xA48F) /* Yi Syllables */
+		return 1;
+	if (sym >= 0xA490 && sym <= 0xA4CF) /* Yi Radicals */
+		return 1;
+#endif
+	/* Speed up previous block */
+	if (sym >= 0x2E80 && sym <= 0xA4CF && sym != 0x303F)
+		return 1;
+
+	if (sym >= 0xAC00 && sym <= 0xD7AF) /* Hangul Syllables */
+		return 1;
+	if (sym >= 0xF900 && sym <= 0xFAFF) /* CJK Compatibility Ideographs */
+		return 1;
+	if (sym >= 0xFE10 && sym <= 0xFE1F) /* Vertical Forms */
+		return 1;
+
+#if 0
+	if (sym >= 0xFE30 && sym <= 0xFE4F) /* CJK Compatibility Forms */
+		return 1;
+	if (sym >= 0xFE50 && sym <= 0xFE6F) /* Small Form Variants */
+		return 1;
+#endif
+	/* Speed up previous block */
+	if (sym >= 0xFE30 && sym <= 0xFE6F)
+		return 1;
+
+	if ((sym >= 0xFF00 && sym <= 0xFF60) ||
+		(sym >= 0xFFE0 && sym <= 0xFFE6)) /* Fullwidth Forms */
+		return 1;
+
+	if (sym >= 0x1D300 && sym <= 0x1D35F) /* Tai Xuan Jing Symbols */
+		return 1;
+	if (sym >= 0x20000 && sym <= 0x2B81F) /* CJK Unified Ideographs Extensions B, C, D */
+		return 1;
+	if (sym >= 0x2F800 && sym <= 0x2FA1F) /* CJK Compatibility Ideographs Supplement */
+		return 1;
+
+	return 0;
+}
+
+/*-------------------------------------------------------- */
 static void utf8_point_left(tinyrl_t * this)
 {
 	if (!this->utf8)
@@ -41,19 +178,31 @@ static void utf8_point_right(tinyrl_t * this)
 }
 
 /*-------------------------------------------------------- */
-static unsigned utf8_nsyms(const tinyrl_t * this, const char *str, unsigned num)
+static unsigned int utf8_nsyms(const tinyrl_t *this, const char *str,
+	unsigned int num)
 {
-	unsigned nsym = 0;
-	unsigned i;
+	unsigned int nsym = 0;
+	unsigned long sym = 0;
+	unsigned int i = 0;
 
 	if (!this->utf8)
 		return num;
-	for (i = 0; i < num; i++) {
+
+	while (i < num) {
 		if ('\0' == str[i])
 			break;
-		if (UTF8_10 == (str[i] & UTF8_MASK))
+		/* ASCII char */
+		if (!(UTF8_7BIT_MASK & str[i])) {
+			i++;
+			nsym++;
 			continue;
-		nsym++;
+		}
+		/* Multibyte */
+		i += utf8_wchar(&str[i], &sym);
+		if (utf8_is_cjk(sym)) /* CJK chars have double-width */
+			nsym += 2;
+		else
+			nsym += 1;
 	}
 
 	return nsym;
@@ -112,6 +261,8 @@ static void changed_line(tinyrl_t * this)
 /*----------------------------------------------------------------------- */
 static int tinyrl_timeout_default(tinyrl_t *this)
 {
+	this = this; /* Happy compiler */
+
 	/* Return -1 to close session on timeout */
 	return -1;
 }
@@ -126,13 +277,9 @@ static bool_t tinyrl_key_default(tinyrl_t * this, int key)
 		/* inject this text into the buffer */
 		result = tinyrl_insert_text(this, tmp);
 	} else {
-		char tmp[10];
 		/* Call the external hotkey analyzer */
-		if (!this->hotkey_fn || !this->hotkey_fn(this, key)) {
-			sprintf(tmp, "~%d", key);
-			/* inject control characters as ~N where N is the ASCII code */
-			result = tinyrl_insert_text(this, tmp);
-		}
+		if (this->hotkey_fn)
+			this->hotkey_fn(this, key);
 	}
 	return result;
 }
@@ -292,7 +439,7 @@ static bool_t tinyrl_key_backspace(tinyrl_t *this, int key)
 {
 	bool_t result = BOOL_FALSE;
 	if (this->point) {
-		unsigned end = --this->point;
+		unsigned int end = --this->point;
 		utf8_point_left(this);
 		tinyrl_delete_text(this, this->point, end);
 		result = BOOL_TRUE;
@@ -327,7 +474,7 @@ static bool_t tinyrl_key_delete(tinyrl_t * this, int key)
 {
 	bool_t result = BOOL_FALSE;
 	if (this->point < this->end) {
-		unsigned begin = this->point++;
+		unsigned int begin = this->point++;
 		utf8_point_right(this);
 		tinyrl_delete_text(this, begin, this->point - 1);
 		result = BOOL_TRUE;
@@ -353,12 +500,26 @@ static bool_t tinyrl_key_clear_screen(tinyrl_t * this, int key)
 /*-------------------------------------------------------- */
 static bool_t tinyrl_key_erase_line(tinyrl_t * this, int key)
 {
+	unsigned int end;
 
-	if (this->point) {
-		unsigned end = this->point - 1;
-		tinyrl_delete_text(this, 0, end);
-		this->point = 0;
+	/* release any old kill string */
+	lub_string_free(this->kill_string);
+
+	if (!this->point) {
+		this->kill_string = NULL;
+		return BOOL_TRUE;
 	}
+
+	end = this->point - 1;
+
+	/* store the killed string */
+	this->kill_string = malloc(this->point + 1);
+	memcpy(this->kill_string, this->buffer, this->point);
+	this->kill_string[this->point] = '\0';
+
+	/* delete the text from the start of the line */
+	tinyrl_delete_text(this, 0, end);
+	this->point = 0;
 
 	/* keep the compiler happy */
 	key = key;
@@ -367,11 +528,12 @@ static bool_t tinyrl_key_erase_line(tinyrl_t * this, int key)
 	return BOOL_TRUE;
 }/*-------------------------------------------------------- */
 
-static bool_t tinyrl_key_escape(tinyrl_t * this, int key)
+static bool_t tinyrl_escape_seq(tinyrl_t *this, const char *esc_seq)
 {
+	int key = 0;
 	bool_t result = BOOL_FALSE;
 
-	switch (tinyrl_vt100_escape_decode(this->term)) {
+	switch (tinyrl_vt100_escape_decode(this->term, esc_seq)) {
 	case tinyrl_vt100_CURSOR_UP:
 		result = tinyrl_key_up(this, key);
 		break;
@@ -399,6 +561,7 @@ static bool_t tinyrl_key_escape(tinyrl_t * this, int key)
 	case tinyrl_vt100_UNKNOWN:
 		break;
 	}
+
 	return result;
 }
 
@@ -443,24 +606,21 @@ static void tinyrl_fini(tinyrl_t * this)
 }
 
 /*-------------------------------------------------------- */
-static void
-tinyrl_init(tinyrl_t * this,
-	FILE * istream, FILE * ostream,
-	unsigned stifle, tinyrl_completion_func_t * complete_fn)
+static void tinyrl_init(tinyrl_t * this, FILE * istream, FILE * ostream,
+	unsigned int stifle, tinyrl_completion_func_t * complete_fn)
 {
 	int i;
 
 	for (i = 0; i < NUM_HANDLERS; i++) {
 		this->handlers[i] = tinyrl_key_default;
 	}
-	/* default handlers */
+	/* Default handlers */
 	this->handlers[KEY_CR] = tinyrl_key_crlf;
 	this->handlers[KEY_LF] = tinyrl_key_crlf;
 	this->handlers[KEY_ETX] = tinyrl_key_interrupt;
 	this->handlers[KEY_DEL] = tinyrl_key_backspace;
 	this->handlers[KEY_BS] = tinyrl_key_backspace;
 	this->handlers[KEY_EOT] = tinyrl_key_delete;
-	this->handlers[KEY_ESC] = tinyrl_key_escape;
 	this->handlers[KEY_FF] = tinyrl_key_clear_screen;
 	this->handlers[KEY_NAK] = tinyrl_key_erase_line;
 	this->handlers[KEY_SOH] = tinyrl_key_start_of_line;
@@ -490,6 +650,7 @@ tinyrl_init(tinyrl_t * this,
 	this->echo_enabled = BOOL_TRUE;
 	this->last_buffer = NULL;
 	this->last_point = 0;
+	this->last_line_size = 0;
 	this->utf8 = BOOL_FALSE;
 
 	/* create the vt100 terminal */
@@ -547,7 +708,7 @@ static void tinyrl_internal_print(const tinyrl_t * this, const char *text)
 	} else {
 		/* replace the line with echo char if defined */
 		if (this->echo_char) {
-			unsigned i = strlen(text);
+			unsigned int i = strlen(text);
 			while (i--) {
 				tinyrl_vt100_printf(this->term, "%c",
 					this->echo_char);
@@ -585,6 +746,7 @@ void tinyrl_multi_crlf(const tinyrl_t * this)
 	tinyrl_internal_position(this, this->prompt_len + line_len,
 		- (line_len - count), this->last_width);
 	tinyrl_crlf(this);
+	tinyrl_vt100_oflush(this->term);
 }
 
 /*----------------------------------------------------------------------- */
@@ -620,7 +782,9 @@ void tinyrl_redisplay(tinyrl_t * this)
 	cols = (this->prompt_len + line_len) % width;
 	if (!cols && (line_size - eq_chars))
 		tinyrl_vt100_next_line(this->term);
-	tinyrl_vt100_erase_down(this->term);
+	/* Erase down if current line is shorter than previous one */
+	if (this->last_line_size > line_size)
+		tinyrl_vt100_erase_down(this->term);
 	/* Move the cursor to the insertion point */
 	if (this->point < line_size) {
 		unsigned int pre_len = utf8_nsyms(this,
@@ -632,18 +796,19 @@ void tinyrl_redisplay(tinyrl_t * this)
 	}
 
 	/* Update the display */
-	(void)tinyrl_vt100_oflush(this->term);
+	tinyrl_vt100_oflush(this->term);
 
 	/* Save the last line buffer */
 	lub_string_free(this->last_buffer);
 	this->last_buffer = lub_string_dup(this->line);
 	this->last_point = this->point;
 	this->last_width = width;
+	this->last_line_size = line_size;
 }
 
 /*----------------------------------------------------------------------- */
 tinyrl_t *tinyrl_new(FILE * istream, FILE * ostream,
-	unsigned stifle, tinyrl_completion_func_t * complete_fn)
+	unsigned int stifle, tinyrl_completion_func_t * complete_fn)
 {
 	tinyrl_t *this = NULL;
 
@@ -688,7 +853,6 @@ static char *internal_readline(tinyrl_t * this,
 	char *result = NULL;
 	int lerrno = 0;
 
-	/* initialise for reading a line */
 	this->done = BOOL_FALSE;
 	this->point = 0;
 	this->end = 0;
@@ -697,54 +861,102 @@ static char *internal_readline(tinyrl_t * this,
 	this->line = this->buffer;
 	this->context = context;
 
+	/* Interactive session */
 	if (this->isatty && !str) {
-		/* set the terminal into raw input mode */
+		unsigned int utf8_cont = 0; /* UTF-8 continue bytes */
+		unsigned int esc_cont = 0; /* Escape sequence continues */
+		char esc_seq[10]; /* Buffer for ESC sequence */
+		char *esc_p = esc_seq;
+
+		/* Set the terminal into raw mode */
 		tty_set_raw_mode(this);
 		tinyrl_reset_line_state(this);
 
 		while (!this->done) {
 			int key;
-			/* get a key */
+
 			key = tinyrl_getchar(this);
-			/* has the input stream terminated? */
-			if (key >= 0) { /* Real key pressed */
-				/* Common callback for any key */
-				if (this->keypress_fn)
-					this->keypress_fn(this, key);
-				/* Call the handler for this key */
-				if (!this->handlers[key](this, key))
-					tinyrl_ding(this);
-				if (this->done) {
-					/*
-					 * If the last character in the line (other than
-					 * the null) is a space remove it.
-					 */
-					if (this->end &&
-						isspace(this->line[this->end - 1]))
-						tinyrl_delete_text(this,
-							this->end - 1,
-							this->end);
-				} else {
-					/* Update the display if the key
-					is not first UTF8 byte */
-					if (!(this->utf8 &&
-						(UTF8_11 == (key & UTF8_MASK))))
-						tinyrl_redisplay(this);
-				}
-			} else { /* Error || EOF || Timeout */
+
+			/* Error || EOF || Timeout */
+			if (key < 0) {
 				if ((VT100_TIMEOUT == key) &&
 					!this->timeout_fn(this))
 					continue;
-				/* time to finish the session */
+				/* It's time to finish the session */
 				this->done = BOOL_TRUE;
 				this->line = NULL;
 				lerrno = ENOENT;
+				continue;
 			}
+
+			/* Real key pressed */
+			/* Common callback for any key */
+			if (this->keypress_fn)
+				this->keypress_fn(this, key);
+
+			/* Check for ESC sequence. It's a special case. */
+			if (!esc_cont && (key == KEY_ESC)) {
+				esc_cont = 1; /* Start ESC sequence */
+				esc_p = esc_seq;
+				continue;
+			}
+			if (esc_cont) {
+				/* Broken sequence */
+				if (esc_p >= (esc_seq + sizeof(esc_seq) - 1)) {
+					esc_cont = 0;
+					continue;
+				}
+				/* Dump the control sequence into sequence buffer
+				   ANSI standard control sequences will end
+				   with a character between 64 - 126 */
+				*esc_p = key & 0xff;
+				esc_p++;
+				/* This is an ANSI control sequence terminator code */
+				if ((key != '[') && (key > 63)) {
+					*esc_p = '\0';
+					tinyrl_escape_seq(this, esc_seq);
+					esc_cont = 0;
+					tinyrl_redisplay(this);
+				}
+				continue;
+			}
+
+			/* Call the handler for this key */
+			if (!this->handlers[key](this, key))
+				tinyrl_ding(this);
+			if (this->done) /* Some handler set the done flag */
+				continue; /* It will break the loop */
+
+			if (this->utf8) {
+				if (!(UTF8_7BIT_MASK & key)) /* ASCII char */
+					utf8_cont = 0;
+				else if (utf8_cont && (UTF8_10 == (key & UTF8_MASK))) /* Continue byte */
+					utf8_cont--;
+				else if (UTF8_11 == (key & UTF8_MASK)) { /* First byte of multibyte char */
+					/* Find out number of char's bytes */
+					int b = key;
+					utf8_cont = 0;
+					while ((utf8_cont < 6) && (UTF8_10 != (b & UTF8_MASK))) {
+						utf8_cont++;
+						b = b << 1;
+					}
+				}
+			}
+			/* For non UTF-8 encoding the utf8_cont is always 0.
+			   For UTF-8 it's 0 when one-byte symbol or we get
+			   all bytes for the current multibyte character. */
+			if (!utf8_cont)
+				tinyrl_redisplay(this);
 		}
-		/* restores the terminal mode */
+		/* If the last character in the line (other than NULL)
+		   is a space remove it. */
+		if (this->end && this->line && isspace(this->line[this->end - 1]))
+			tinyrl_delete_text(this, this->end - 1, this->end);
+		/* Restores the terminal mode */
 		tty_restore_mode(this);
+
+	/* Non-interactive session */
 	} else {
-		/* This is a non-interactive set of commands */
 		char *s = NULL, buffer[80];
 		size_t len = sizeof(buffer);
 		char *tmp = NULL;
@@ -755,7 +967,7 @@ static char *internal_readline(tinyrl_t * this,
 
 		if (str) {
 			tmp = lub_string_dup(str);
-			s = internal_insertline(this, tmp);
+			internal_insertline(this, tmp);
 		} else {
 			while (istream && (sizeof(buffer) == len) &&
 				(s = fgets(buffer, sizeof(buffer), istream))) {
@@ -816,7 +1028,7 @@ char *tinyrl_forceline(tinyrl_t * this, void *context, const char *line)
  * possibly reallocating it if necessary. The function returns BOOL_TRUE
  * if the line is successfully extended, BOOL_FALSE if not.
  */
-bool_t tinyrl_extend_line_buffer(tinyrl_t * this, unsigned len)
+bool_t tinyrl_extend_line_buffer(tinyrl_t * this, unsigned int len)
 {
 	bool_t result = BOOL_TRUE;
 	char *new_buffer;
@@ -873,7 +1085,7 @@ bool_t tinyrl_extend_line_buffer(tinyrl_t * this, unsigned len)
  */
 bool_t tinyrl_insert_text(tinyrl_t * this, const char *text)
 {
-	unsigned delta = strlen(text);
+	unsigned int delta = strlen(text);
 
 	/*
 	 * If the client wants to change the line ensure that the line and buffer
@@ -956,9 +1168,9 @@ void tinyrl_display_matches(const tinyrl_t *this,
  * Delete the text between start and end in the current line. (inclusive)
  * This adjusts the rl_point and rl_end indexes appropriately.
  */
-void tinyrl_delete_text(tinyrl_t * this, unsigned start, unsigned end)
+void tinyrl_delete_text(tinyrl_t * this, unsigned int start, unsigned int end)
 {
-	unsigned delta;
+	unsigned int delta;
 
 	/*
 	 * If the client wants to change the line ensure that the line and buffer
@@ -968,7 +1180,7 @@ void tinyrl_delete_text(tinyrl_t * this, unsigned start, unsigned end)
 
 	/* make sure we play it safe */
 	if (start > end) {
-		unsigned tmp = end;
+		unsigned int tmp = end;
 		start = end;
 		end = tmp;
 	}
@@ -1027,12 +1239,12 @@ bool_t tinyrl_bind_key(tinyrl_t * this, int key, tinyrl_key_func_t * fn)
  * more matches. 
  */
 char **tinyrl_completion(tinyrl_t * this,
-	const char *line, unsigned start, unsigned end,
+	const char *line, unsigned int start, unsigned int end,
 	tinyrl_compentry_func_t * entry_func)
 {
-	unsigned state = 0;
+	unsigned int state = 0;
 	size_t size = 1;
-	unsigned offset = 1;	/* need at least one entry for the substitution */
+	unsigned int offset = 1; /* Need at least one entry for the substitution */
 	char **matches = NULL;
 	char *match;
 	/* duplicate the string upto the insertion point */
@@ -1107,9 +1319,9 @@ void tinyrl_ding(const tinyrl_t * this)
 /*-------------------------------------------------------- */
 void tinyrl_reset_line_state(tinyrl_t * this)
 {
-	/* start from scratch */
 	lub_string_free(this->last_buffer);
 	this->last_buffer = NULL;
+	this->last_line_size = 0;
 
 	tinyrl_redisplay(this);
 }
@@ -1140,7 +1352,7 @@ tinyrl_do_complete(tinyrl_t * this, bool_t with_extensions)
 {
 	tinyrl_match_e result = TINYRL_NO_MATCH;
 	char **matches = NULL;
-	unsigned start, end;
+	unsigned int start, end;
 	bool_t completion = BOOL_FALSE;
 	bool_t prefix = BOOL_FALSE;
 	int i = 0;
@@ -1185,7 +1397,7 @@ tinyrl_do_complete(tinyrl_t * this, bool_t with_extensions)
 	/* is there more than one completion? */
 	if (matches[2]) {
 		char **tmp = matches;
-		unsigned max, len;
+		unsigned int max, len;
 		max = len = 0;
 		while (*tmp) {
 			size_t size = strlen(*tmp++);
@@ -1385,7 +1597,7 @@ bool_t tinyrl_is_quoting(const tinyrl_t * this)
 {
 	bool_t result = BOOL_FALSE;
 	/* count the quotes upto the current insertion point */
-	unsigned i = 0;
+	unsigned int i = 0;
 	while (i < this->point) {
 		if (result && (this->line[i] == '\\')) {
 			i++;
@@ -1408,19 +1620,19 @@ bool_t tinyrl_is_empty(const tinyrl_t *this)
 }
 
 /*--------------------------------------------------------- */
-void tinyrl_limit_line_length(tinyrl_t * this, unsigned length)
+void tinyrl_limit_line_length(tinyrl_t * this, unsigned int length)
 {
 	this->max_line_length = length;
 }
 
 /*--------------------------------------------------------- */
-extern unsigned tinyrl__get_width(const tinyrl_t *this)
+extern unsigned int tinyrl__get_width(const tinyrl_t *this)
 {
 	return tinyrl_vt100__get_width(this->term);
 }
 
 /*--------------------------------------------------------- */
-extern unsigned tinyrl__get_height(const tinyrl_t *this)
+extern unsigned int tinyrl__get_height(const tinyrl_t *this)
 {
 	return tinyrl_vt100__get_height(this->term);
 }

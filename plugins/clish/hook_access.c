@@ -25,16 +25,20 @@
 #include "clish/shell.h"
 
 /*--------------------------------------------------------- */
+/* Return values:
+ *    0 - access granted
+ *    !=0 - access denied
+ */
 CLISH_HOOK_ACCESS(clish_hook_access)
 {
-	bool_t allowed = BOOL_FALSE; /* assume the user is not allowed */
+	int allowed = -1; /* assume the user is not allowed */
 #ifdef HAVE_GRP_H
 	int num_groups;
 	long ngroups_max;
 	gid_t *group_list;
 	int i;
 	char *tmp_access, *full_access;
-	char *saveptr;
+	char *saveptr = NULL;
 
 	assert(access);
 	full_access = lub_string_dup(access);
@@ -52,7 +56,7 @@ CLISH_HOOK_ACCESS(clish_hook_access)
 		tmp_access; tmp_access = strtok_r(NULL, ":", &saveptr)) {
 		/* Check for the "*" wildcard */
 		if (0 == strcmp("*", tmp_access)) {
-			allowed = BOOL_TRUE;
+			allowed = 0;
 			break;
 		}
 		/* The internal loop goes trough the system group list */
@@ -62,19 +66,22 @@ CLISH_HOOK_ACCESS(clish_hook_access)
 				continue;
 			if (0 == strcmp(ptr->gr_name, tmp_access)) {
 				/* The current user is permitted to use this command */
-				allowed = BOOL_TRUE;
+				allowed = 0;
 				free(ptr);
 				break;
 			}
 			free(ptr);
 		}
-		if (BOOL_TRUE == allowed)
+		if (!allowed)
 			break;
 	}
 
 	lub_string_free(full_access);
 	free(group_list);
 #endif
+
+	clish_shell = clish_shell; /* Happy compiler */
+
 	return allowed;
 }
 

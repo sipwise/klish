@@ -14,6 +14,10 @@ easy.
 #ifndef _lub_dump_h
 #define _lub_dump_h
 
+#define LUB_DUMP_NULL "(null)"
+#define LUB_DUMP_STR(str) ( str ? str : LUB_DUMP_NULL )
+#define LUB_DUMP_BOOL(val) ( val ? "true" : "false" )
+
 #include <stdarg.h>
 /*=====================================
  * DUMP INTERFACE

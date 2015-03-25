@@ -4,6 +4,8 @@ ACLOCAL_AMFLAGS = -I m4
 
 AM_CPPFLAGS = -I. -I$(top_srcdir)
 AM_LD = $(CC)
+VERSION_INFO = -version-info $(SONAME_CURRENT):$(SONAME_REVISION):$(SONAME_AGE)
+AM_LDFLAGS = $(VERSION_INFO)
 
 if DEBUG
   DEBUG_CFLAGS = -DDEBUG
@@ -24,6 +26,8 @@ EXTRA_DIST = \
 	tinyrl/module.am \
 	konf/module.am \
 	plugins/module.am \
+	libc/module.am \
+	doc/module.am \
 	contrib \
 	xml-examples \
 	debian \
@@ -39,3 +43,5 @@ include $(top_srcdir)/konf/module.am
 include $(top_srcdir)/clish/module.am
 include $(top_srcdir)/bin/module.am
 include $(top_srcdir)/plugins/module.am
+include $(top_srcdir)/libc/module.am
+include $(top_srcdir)/doc/module.am

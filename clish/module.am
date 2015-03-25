@@ -2,18 +2,18 @@
 lib_LTLIBRARIES += libclish.la
 
 libclish_la_SOURCES = \
-    clish/private.h
+	clish/plugin_builtin.c \
+	clish/private.h
 
-libclish_la_LDFLAGS = @XML_LDFLAGS@
+libclish_la_LDFLAGS = $(VERSION_INFO) @XML_LDFLAGS@
 libclish_la_CFLAGS = @XML_CFLAGS@ $(DEBUG_CFLAGS)
-libclish_la_LIBADD = \
-	liblub.la \
-	libtinyrl.la \
-	libkonf.la @XML_LIBS@
 libclish_la_DEPENDENCIES = \
 	liblub.la \
 	libtinyrl.la \
 	libkonf.la
+libclish_la_LIBADD = \
+	$(libclish_la_DEPENDENCIES) \
+	@XML_LIBS@
 
 nobase_include_HEADERS += \
 	clish/types.h \

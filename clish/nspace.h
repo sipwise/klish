@@ -34,7 +34,7 @@ typedef enum {
 /*-----------------
  * meta functions
  *----------------- */
-clish_nspace_t *clish_nspace_new(clish_view_t * view);
+clish_nspace_t *clish_nspace_new(const char *view_name);
 /*-----------------
  * methods
  *----------------- */
@@ -50,21 +50,25 @@ void clish_nspace_clean_proxy(clish_nspace_t * instance);
 /*-----------------
  * attributes
  *----------------- */
+void clish_nspace__set_view(clish_nspace_t *instance, clish_view_t *view);
+clish_view_t *clish_nspace__get_view(const clish_nspace_t * instance);
+void clish_nspace__set_view_name(clish_nspace_t *instance, const char *view_name);
+const char * clish_nspace__get_view_name(const clish_nspace_t *instance);
 const char *clish_nspace__get_prefix(const clish_nspace_t * instance);
 const regex_t *clish_nspace__get_prefix_regex(const clish_nspace_t * instance);
 bool_t clish_nspace__get_help(const clish_nspace_t * instance);
 bool_t clish_nspace__get_completion(const clish_nspace_t * instance);
 bool_t clish_nspace__get_context_help(const clish_nspace_t * instance);
 bool_t clish_nspace__get_inherit(const clish_nspace_t * instance);
-bool_t
-clish_nspace__get_visibility(const clish_nspace_t * instance,
-			     clish_nspace_visibility_t field);
-clish_view_t *clish_nspace__get_view(const clish_nspace_t * instance);
+bool_t clish_nspace__get_visibility(const clish_nspace_t * instance,
+	clish_nspace_visibility_t field);
 void clish_nspace__set_prefix(clish_nspace_t * instance, const char *prefix);
 void clish_nspace__set_help(clish_nspace_t * instance, bool_t help);
 void clish_nspace__set_completion(clish_nspace_t * instance, bool_t help);
 void clish_nspace__set_context_help(clish_nspace_t * instance, bool_t help);
 void clish_nspace__set_inherit(clish_nspace_t * instance, bool_t inherit);
+void clish_nspace__set_access(clish_nspace_t *instance, const char *access);
+char *clish_nspace__get_access(const clish_nspace_t *instance);
 
 #endif				/* _clish_nspace_h */
 /** @} clish_nspace */

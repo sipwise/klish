@@ -21,7 +21,7 @@
 static int clish_shell_lock(const char *lock_path)
 {
 	int i;
-	int res;
+	int res = -1;
 	int lock_fd = -1;
 	struct flock lock;
 
@@ -32,10 +32,12 @@ static int clish_shell_lock(const char *lock_path)
 		fprintf(stderr, "Warning: Can't open lockfile %s.\n", lock_path);
 		return -1;
 	}
+#ifdef FD_CLOEXEC
+	fcntl(lock_fd, F_SETFD, fcntl(lock_fd, F_GETFD) | FD_CLOEXEC);
+#endif
+	memset(&lock, 0, sizeof(lock));
 	lock.l_type = F_WRLCK;
 	lock.l_whence = SEEK_SET;
-	lock.l_start = 0;
-	lock.l_len = 0;
 	for (i = 0; i < CLISH_LOCK_WAIT; i++) {
 		res = fcntl(lock_fd, F_SETLK, &lock);
 		if (res != -1)
@@ -49,6 +51,8 @@ static int clish_shell_lock(const char *lock_path)
 			sleep(1);
 			continue;
 		}
+		if (EINVAL == errno)
+			fprintf(stderr, "Error: Locking isn't supported by OS, consider \"--lockless\".\n");
 		break;
 	}
 	if (res == -1) {
@@ -66,10 +70,9 @@ static void clish_shell_unlock(int lock_fd)
 
 	if (lock_fd == -1)
 		return;
+	memset(&lock, 0, sizeof(lock));
 	lock.l_type = F_UNLCK;
 	lock.l_whence = SEEK_SET;
-	lock.l_start = 0;
-	lock.l_len = 0;
 	fcntl(lock_fd, F_SETLK, &lock);
 	close(lock_fd);
 }
@@ -170,6 +173,9 @@ int clish_shell_execute(clish_context_t *context, char **out)
 		if (viewname) {
 			/* Search for the view */
 			clish_view_t *view = clish_shell_find_view(this, viewname);
+			if (!view)
+				fprintf(stderr, "System error: Can't "
+					"change view to %s\n", viewname);
 			lub_string_free(viewname);
 			/* Save the PWD */
 			if (view) {
@@ -236,14 +242,6 @@ void *clish_shell_check_hook(const clish_context_t *clish_context, int type)
 		return NULL;
 
 	return func;
-}
-
-/*----------------------------------------------------------- */
-CLISH_HOOK_ACCESS(clish_shell_exec_access)
-{
-	clish_hook_access_fn_t *func = NULL;
-	func = clish_shell_check_hook(clish_context, CLISH_SYM_TYPE_ACCESS);
-	return func ? func(clish_context, access) : 0;
 }
 
 /*----------------------------------------------------------- */

@@ -3,6 +3,7 @@
  */
 #include <stdlib.h>
 #include <assert.h>
+#include <syslog.h>
 
 #include "lub/string.h"
 #include "private.h"
@@ -86,7 +87,7 @@ char *clish_shell__get_pwd_line(const clish_shell_t *this, unsigned int index)
 char *clish_shell__get_pwd_full(const clish_shell_t * this, unsigned int depth)
 {
 	char *pwd = NULL;
-	unsigned i;
+	unsigned int i;
 
 	for (i = 1; i <= depth; i++) {
 		const char *str =
@@ -152,4 +153,21 @@ int clish_shell__set_socket(clish_shell_t * this, const char * path)
 	this->client = konf_client_new(path);
 
 	return 0;
+}
+
+/*--------------------------------------------------------- */
+void clish_shell__set_facility(clish_shell_t *this, int facility)
+{
+	if (!this)
+		return;
+	this->log_facility = facility;
+}
+
+/*--------------------------------------------------------- */
+int clish_shell__get_facility(clish_shell_t *this)
+{
+	if (!this)
+		return LOG_LOCAL0;
+
+	return this->log_facility;
 }

@@ -1,5 +1,7 @@
 #include <stdlib.h>
 #include <assert.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "lub/string.h"
 #include "private.h"
@@ -46,6 +48,9 @@ int clish_shell_push_file(clish_shell_t * this, const char * fname,
 	file = fopen(fname, "r");
 	if (!file)
 		return -1;
+#ifdef FD_CLOEXEC
+       fcntl(fileno(file), F_SETFD, fcntl(fileno(file), F_GETFD) | FD_CLOEXEC);
+#endif
 	res = clish_shell_push(this, file, fname, stop_on_error);
 	if (res)
 		fclose(file);

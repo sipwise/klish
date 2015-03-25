@@ -43,6 +43,7 @@ clish_command_init(clish_command_t *this, const char *name, const char *text)
 	this->lock = BOOL_TRUE;
 	this->interrupt = BOOL_FALSE;
 	this->dynamic = BOOL_FALSE;
+	this->access = NULL;
 }
 
 /*--------------------------------------------------------- */
@@ -61,11 +62,13 @@ static void clish_command_fini(clish_command_t * this)
 	clish_action_delete(this->action);
 	clish_config_delete(this->config);
 	lub_string_free(this->alias);
+	lub_string_free(this->alias_view);
 	lub_string_free(this->viewname);
 	lub_string_free(this->viewid);
 	lub_string_free(this->detail);
 	lub_string_free(this->escape_chars);
 	lub_string_free(this->regex_chars);
+	lub_string_free(this->access);
 	if (this->args)
 		clish_param_delete(this->args);
 }
@@ -121,7 +124,7 @@ clish_command_t *clish_command_new_link(const char *name,
 	*this = *ref;
 	/* Initialise the name (other than original name) */
 	this->name = lub_string_dup(name);
-	/* Initialise the name (other than original name) */
+	/* Initialise the help (other than original help) */
 	this->text = lub_string_dup(help);
 	/* Be a good binary tree citizen */
 	lub_bintree_node_init(&this->bt_node);
@@ -132,17 +135,14 @@ clish_command_t *clish_command_new_link(const char *name,
 }
 
 /*--------------------------------------------------------- */
-clish_command_t * clish_command_alias_to_link(clish_command_t * this)
+clish_command_t * clish_command_alias_to_link(clish_command_t *this, clish_command_t *ref)
 {
-	clish_command_t * ref;
 	clish_command_t tmp;
 
-	if (!this || !this->alias)
-		return this;
-	assert(this->alias_view);
-	ref = clish_view_find_command(this->alias_view, this->alias, BOOL_FALSE);
-	if (!ref)
-		return this;
+	if (!this || !ref)
+		return NULL;
+	if (ref->alias) /* The reference is a link too */
+		return NULL;
 	memcpy(&tmp, this, sizeof(tmp));
 	*this = *ref;
 	memcpy(&this->bt_node, &tmp.bt_node, sizeof(tmp.bt_node));
@@ -172,6 +172,8 @@ void clish_command_insert_param(clish_command_t * this, clish_param_t * param)
 /*--------------------------------------------------------- */
 int clish_command_help(const clish_command_t *this)
 {
+	this = this; /* Happy compiler */
+
 	return 0;
 }
 
@@ -260,6 +262,8 @@ void clish_command__set_viewname(clish_command_t * this, const char *viewname)
 /*--------------------------------------------------------- */
 void clish_command__force_viewname(clish_command_t * this, const char *viewname)
 {
+	if (this->viewname)
+		lub_string_free(this->viewname);
 	this->viewname = lub_string_dup(viewname);
 }
 
@@ -279,6 +283,8 @@ void clish_command__set_viewid(clish_command_t * this, const char *viewid)
 /*--------------------------------------------------------- */
 void clish_command__force_viewid(clish_command_t * this, const char *viewid)
 {
+	if (this->viewid)
+		lub_string_free(this->viewid);
 	this->viewid = lub_string_dup(viewid);
 }
 
@@ -338,7 +344,7 @@ void clish_command__set_args(clish_command_t * this, clish_param_t * args)
 }
 
 /*--------------------------------------------------------- */
-const clish_param_t *clish_command__get_args(const clish_command_t * this)
+clish_param_t *clish_command__get_args(const clish_command_t * this)
 {
 	return this->args;
 }
@@ -368,7 +374,7 @@ clish_view_t *clish_command__get_pview(const clish_command_t * this)
 }
 
 /*--------------------------------------------------------- */
-unsigned clish_command__get_depth(const clish_command_t * this)
+int clish_command__get_depth(const clish_command_t * this)
 {
 	if (!this->pview)
 		return 0;
@@ -406,7 +412,8 @@ void clish_command__set_lock(clish_command_t * this, bool_t lock)
 /*--------------------------------------------------------- */
 void clish_command__set_alias(clish_command_t * this, const char * alias)
 {
-	assert(!this->alias);
+	if (this->alias)
+		lub_string_free(this->alias);
 	this->alias = lub_string_dup(alias);
 }
 
@@ -417,14 +424,16 @@ const char * clish_command__get_alias(const clish_command_t * this)
 }
 
 /*--------------------------------------------------------- */
-void clish_command__set_alias_view(clish_command_t * this,
-	clish_view_t * alias_view)
+void clish_command__set_alias_view(clish_command_t *this,
+	const char *alias_view)
 {
-	this->alias_view = alias_view;
+	if (this->alias_view)
+		lub_string_free(this->alias_view);
+	this->alias_view = lub_string_dup(alias_view);
 }
 
 /*--------------------------------------------------------- */
-clish_view_t * clish_command__get_alias_view(const clish_command_t * this)
+const char * clish_command__get_alias_view(const clish_command_t * this)
 {
 	return this->alias_view;
 }
@@ -461,4 +470,18 @@ bool_t clish_command__get_interrupt(const clish_command_t * this)
 void clish_command__set_interrupt(clish_command_t * this, bool_t interrupt)
 {
 	this->interrupt = interrupt;
+}
+
+/*--------------------------------------------------------- */
+void clish_command__set_access(clish_command_t *this, const char *access)
+{
+	if (this->access)
+		lub_string_free(this->access);
+	this->access = lub_string_dup(access);
+}
+
+/*--------------------------------------------------------- */
+char *clish_command__get_access(const clish_command_t *this)
+{
+	return this->access;
 }

@@ -39,7 +39,8 @@ struct passwd *lub_db_getpwnam(const char *name)
 			errno = ENOENT;
 		return NULL;
 	}
-	return pw;
+
+	return pwbuf;
 }
 
 struct passwd *lub_db_getpwuid(uid_t uid)
@@ -72,7 +73,7 @@ struct passwd *lub_db_getpwuid(uid_t uid)
 		return NULL;
 	}
 
-	return pw;
+	return pwbuf;
 }
 
 struct group *lub_db_getgrnam(const char *name)
@@ -96,7 +97,7 @@ struct group *lub_db_getgrnam(const char *name)
 	
 	res = getgrnam_r(name, grbuf, buf, size, &gr);
 
-	if (NULL == gr) {
+	if (!gr) {
 		free(grbuf);
 		if (res != 0)
 			errno = res;
@@ -105,7 +106,7 @@ struct group *lub_db_getgrnam(const char *name)
 		return NULL;
 	}
 
-	return gr;
+	return grbuf;
 }
 
 struct group *lub_db_getgrgid(gid_t gid)
@@ -138,5 +139,5 @@ struct group *lub_db_getgrgid(gid_t gid)
 		return NULL;
 	}
 
-	return gr;
+	return grbuf;
 }

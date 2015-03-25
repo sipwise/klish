@@ -50,7 +50,7 @@ typedef enum {
  * meta functions
  *----------------- */
 clish_param_t *clish_param_new(const char *name,
-	const char *text, clish_ptype_t *ptype);
+	const char *text, const char *ptype_name);
 /*-----------------
  * methods
  *----------------- */
@@ -63,11 +63,14 @@ void clish_param_insert_param(clish_param_t * instance, clish_param_t * param);
 /*-----------------
  * attributes
  *----------------- */
+void clish_param__set_ptype_name(clish_param_t *instance, const char *ptype_name);
+const char * clish_param__get_ptype_name(const clish_param_t *instance);
 const char *clish_param__get_name(const clish_param_t * instance);
 const char *clish_param__get_text(const clish_param_t * instance);
 const char *clish_param__get_range(const clish_param_t * instance);
 const char *clish_param__get_default(const clish_param_t * instance);
 clish_ptype_t *clish_param__get_ptype(const clish_param_t * instance);
+void clish_param__set_ptype(clish_param_t *instance, clish_ptype_t *ptype);
 void clish_param__set_default(clish_param_t * instance, const char *defval);
 void clish_param__set_mode(clish_param_t * instance, clish_param_mode_e mode);
 clish_param_mode_e clish_param__get_mode(const clish_param_t * instance);
@@ -88,11 +91,14 @@ void clish_param__set_test(clish_param_t * instance, const char *test);
 char *clish_param__get_test(const clish_param_t *instance);
 void clish_param__set_completion(clish_param_t *instance, const char *completion);
 char *clish_param__get_completion(const clish_param_t *instance);
+void clish_param__set_access(clish_param_t *instance, const char *access);
+char *clish_param__get_access(const clish_param_t *instance);
 
 /* paramv methods */
 clish_paramv_t *clish_paramv_new(void);
 void clish_paramv_delete(clish_paramv_t * instance);
 void clish_paramv_insert(clish_paramv_t * instance, clish_param_t * param);
+int clish_paramv_remove(clish_paramv_t *instance, unsigned int index); /* Remove param from vector */
 clish_param_t *clish_paramv__get_param(const clish_paramv_t * instance,
 				unsigned index);
 unsigned int clish_paramv__get_count(const clish_paramv_t * instance);

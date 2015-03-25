@@ -109,7 +109,7 @@ void clish_shell_help(clish_shell_t *this, const char *line)
 	clish_help_t help;
 	size_t max_width = 0;
 	const clish_command_t *cmd;
-	int i;
+	unsigned int i;
 
 	help.name = lub_argv_new(NULL, 0);
 	help.help = lub_argv_new(NULL, 0);

@@ -115,11 +115,22 @@ int clish_xmlnode_get_type(clish_xmlnode_t *node)
 
 clish_xmlnode_t *clish_xmldoc_get_root(clish_xmldoc_t *doc)
 {
-	if (doc) {
-		node_t *root = roxml_get_root(xmldoc_to_node(doc));
-		return node_to_xmlnode(root);
-	}
-	return NULL;
+	node_t *root;
+	char *name = NULL;
+
+	if (!doc)
+		return NULL;
+	root = roxml_get_root(xmldoc_to_node(doc));
+	if (!root)
+		return NULL;
+	/* The root node is always documentRoot since libroxml-2.2.2. */
+	/* It's good but not compatible with another XML parsers. */
+	name = roxml_get_name(root, NULL, 0);
+	if (0 == strcmp(name, "documentRoot"))
+		root = roxml_get_chld(root, NULL, 0);
+	roxml_release(name);
+
+	return node_to_xmlnode(root);
 }
 
 clish_xmlnode_t *clish_xmlnode_parent(clish_xmlnode_t *node)
@@ -264,7 +275,8 @@ static int i_get_name(node_t *n, char *v, unsigned int *vl)
 	if (c) {
 		len = strlen(c) + 1;
 		if (len <= *vl) {
-			sprintf(v, "%s", c);
+			snprintf(v, *vl, "%s", c);
+			v[*vl - 1] = '\0';
 			roxml_release(c);
 			return 0;
 		} else {

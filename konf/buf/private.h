@@ -17,6 +17,7 @@ struct konf_buf_s {
 	char *buf;
 	int pos;
 	int rpos;
+	void *data; /* Optional pointer to arbitrary related data */
 };
 
 #endif

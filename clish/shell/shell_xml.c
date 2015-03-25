@@ -18,21 +18,8 @@
 #include <sys/types.h>
 #include <dirent.h>
 
-/* Default hooks */
-#define CLISH_PLUGIN_DEFAULT "clish_plugin_default.so"
-const char* clish_plugin_default_hook[] = {
-	NULL,
-	"clish_script@clish",
-	"clish_hook_access@clish",
-	"clish_hook_config@clish",
-	"clish_hook_log@clish"
-	};
-
-#define CLISH_XML_ERROR_STR "Error parsing XML: "
-#define CLISH_XML_ERROR_ATTR(attr) CLISH_XML_ERROR_STR"The \""attr"\" attribute is required.\n"
-
-typedef int (PROCESS_FN) (clish_shell_t * instance,
-	clish_xmlnode_t * element, void *parent);
+typedef int (PROCESS_FN) (clish_shell_t *instance,
+	clish_xmlnode_t *element, void *parent);
 
 /* Define a control block for handling the decode of an XML file */
 typedef struct clish_xml_cb_s clish_xml_cb_t;
@@ -91,9 +78,8 @@ int clish_shell_load_scheme(clish_shell_t *this, const char *xml_path)
 	const char *path = xml_path;
 	char *buffer;
 	char *dirname;
-	char *saveptr;
+	char *saveptr = NULL;
 	int res = 0;
-	int i = 0;
 
 	/* use the default path */
 	if (!path)
@@ -149,34 +135,8 @@ int clish_shell_load_scheme(clish_shell_t *this, const char *xml_path)
 		if (res)
 			break;
 	}
-	/* tidy up */
 	lub_string_free(buffer);
 
-	/* Load default plugin */
-	if (this->default_plugin) {
-		clish_plugin_t *plugin;
-		plugin = clish_plugin_new(CLISH_PLUGIN_DEFAULT, "clish");
-		lub_list_add(this->plugins, plugin);
-		/* Default hooks */
-		for (i = 0; i < CLISH_SYM_TYPE_MAX; i++) {
-			if (this->hooks_use[i])
-				continue;
-			if (!clish_plugin_default_hook[i])
-				continue;
-			clish_sym__set_name(this->hooks[i],
-				clish_plugin_default_hook[i]);
-		}
-	}
-
-	/* Add default syms to unresolved table */
-	for (i = 0; i < CLISH_SYM_TYPE_MAX; i++) {
-		if (clish_sym__get_name(this->hooks[i]))
-			lub_list_add(this->syms, this->hooks[i]);
-	}
-
-#ifdef DEBUG
-	clish_shell_dump(this);
-#endif
 	return res;
 }
 
@@ -185,7 +145,8 @@ int clish_shell_load_scheme(clish_shell_t *this, const char *xml_path)
  * This function reads an element from the XML stream and processes it.
  * ------------------------------------------------------
  */
-static int process_node(clish_shell_t * shell, clish_xmlnode_t * node, void *parent)
+static int process_node(clish_shell_t *shell, clish_xmlnode_t *node,
+	void *parent)
 {
 	int res = 0;
 
@@ -264,7 +225,7 @@ static int process_children(clish_shell_t *shell,
 }
 
 /* ------------------------------------------------------ */
-int clish_shell_xml_read(clish_shell_t * shell, const char *filename)
+int clish_shell_xml_read(clish_shell_t *shell, const char *filename)
 {
 	int ret = -1;
 	clish_xmldoc_t *doc;
@@ -292,21 +253,24 @@ int clish_shell_xml_read(clish_shell_t * shell, const char *filename)
 }
 
 /* ------------------------------------------------------ */
-static int
-process_clish_module(clish_shell_t * shell, clish_xmlnode_t * element, void *parent)
+static int process_clish_module(clish_shell_t *shell, clish_xmlnode_t *element,
+	void *parent)
 {
 	/* Create the global view */
 	if (!shell->global)
 		shell->global = clish_shell_find_create_view(shell,
-			"global", "");
+			"__view_global", "");
+
+	parent = parent; /* Happy compiler */
+
 	return process_children(shell, element, shell->global);
 }
 
 /* ------------------------------------------------------ */
-static int process_view(clish_shell_t * shell, clish_xmlnode_t * element, void *parent)
+static int process_view(clish_shell_t *shell, clish_xmlnode_t *element,
+	void *parent)
 {
 	clish_view_t *view;
-//	int allowed = 1;
 	int res = -1;
 
 	char *name = clish_xmlnode_fetch_attr(element, "name");
@@ -314,15 +278,6 @@ static int process_view(clish_shell_t * shell, clish_xmlnode_t * element, void *
 	char *depth = clish_xmlnode_fetch_attr(element, "depth");
 	char *restore = clish_xmlnode_fetch_attr(element, "restore");
 	char *access = clish_xmlnode_fetch_attr(element, "access");
-
-	/* Check permissions */
-//	if (access) {
-//		allowed = 0;
-//		if (shell->hooks->access_fn)
-//			allowed = shell->hooks->access_fn(shell, access);
-//	}
-//	if (!allowed)
-//		goto process_view_end;
 
 	/* Check syntax */
 	if (!name) {
@@ -347,6 +302,9 @@ static int process_view(clish_shell_t * shell, clish_xmlnode_t * element, void *
 			clish_view__set_restore(view, CLISH_RESTORE_NONE);
 	}
 
+	if (access)
+		clish_view__set_access(view, access);
+
 //process_view_end:
 	res = process_children(shell, element, view);
 error:
@@ -356,12 +314,14 @@ error:
 	clish_xml_release(restore);
 	clish_xml_release(access);
 
+	parent = parent; /* Happy compiler */
+
 	return res;
-;
 }
 
 /* ------------------------------------------------------ */
-static int process_ptype(clish_shell_t * shell, clish_xmlnode_t * element, void *parent)
+static int process_ptype(clish_shell_t *shell, clish_xmlnode_t *element,
+	void *parent)
 {
 	clish_ptype_method_e method;
 	clish_ptype_preprocess_e preprocess;
@@ -397,12 +357,14 @@ error:
 	clish_xml_release(method_name);
 	clish_xml_release(preprocess_name);
 
+	parent = parent; /* Happy compiler */
+
 	return res;
 }
 
 /* ------------------------------------------------------ */
-static int
-process_overview(clish_shell_t * shell, clish_xmlnode_t * element, void *parent)
+static int process_overview(clish_shell_t *shell, clish_xmlnode_t *element,
+	void *parent)
 {
 	char *content = NULL;
 	unsigned int content_len = 2048;
@@ -416,7 +378,13 @@ process_overview(clish_shell_t * shell, clish_xmlnode_t * element, void *parent)
 	 * Ergo, it -should- be safe.
 	 */
 	do {
-		content = (char*)realloc(content, content_len);
+		char *new = (char*)realloc(content, content_len);
+		if (!new) {
+			if (content)
+				free(content);
+			return -1;
+		}
+		content = new;
 		result = clish_xmlnode_get_content(element, content,
 			&content_len);
 	} while (result == -E2BIG);
@@ -431,19 +399,18 @@ process_overview(clish_shell_t * shell, clish_xmlnode_t * element, void *parent)
 	if (content)
 		free(content);
 
+	parent = parent; /* Happy compiler */
+
 	return 0;
 }
 
 /* ------------------------------------------------------ */
-static int
-process_command(clish_shell_t * shell, clish_xmlnode_t * element, void *parent)
+static int process_command(clish_shell_t *shell, clish_xmlnode_t *element,
+	void *parent)
 {
 	clish_view_t *v = (clish_view_t *) parent;
 	clish_command_t *cmd = NULL;
 	clish_command_t *old;
-	char *alias_name = NULL;
-	clish_view_t *alias_view = NULL;
-//	int allowed = 1;
 	int res = -1;
 
 	char *access = clish_xmlnode_fetch_attr(element, "access");
@@ -468,15 +435,6 @@ process_command(clish_shell_t * shell, clish_xmlnode_t * element, void *parent)
 		goto error;
 	}
 
-	/* Check permissions */
-//	if (access) {
-//		allowed = 0;
-//		if (shell->hooks->access_fn)
-//			allowed = shell->hooks->access_fn(shell, access);
-//	}
-//	if (!allowed)
-//		goto process_command_end;
-
 	/* check this command doesn't already exist */
 	old = clish_view_find_command(v, name, BOOL_FALSE);
 	if (old) {
@@ -484,9 +442,13 @@ process_command(clish_shell_t * shell, clish_xmlnode_t * element, void *parent)
 		goto error;
 	}
 
+	/* create a command */
+	cmd = clish_view_new_command(v, name, help);
+	clish_command__set_pview(cmd, v);
+
 	/* Reference 'ref' field */
 	if (ref) {
-		char *saveptr;
+		char *saveptr = NULL;
 		const char *delim = "@";
 		char *view_name = NULL;
 		char *cmdn = NULL;
@@ -498,19 +460,11 @@ process_command(clish_shell_t * shell, clish_xmlnode_t * element, void *parent)
 			lub_string_free(str);
 			goto error;
 		}
-		alias_name = lub_string_dup(cmdn);
+		clish_command__set_alias(cmd, cmdn); /* alias name */
 		view_name = strtok_r(NULL, delim, &saveptr);
-		if (!view_name)
-			alias_view = v;
-		else
-			alias_view = clish_shell_find_create_view(shell,
-				view_name, NULL);
+		clish_command__set_alias_view(cmd, view_name);
 		lub_string_free(str);
 	}
-
-	/* create a command */
-	cmd = clish_view_new_command(v, name, help);
-	clish_command__set_pview(cmd, v);
 
 	/* define some specialist escape characters */
 	if (escape_chars)
@@ -519,16 +473,13 @@ process_command(clish_shell_t * shell, clish_xmlnode_t * element, void *parent)
 	if (args_name) {
 		/* define a "rest of line" argument */
 		clish_param_t *param;
-		clish_ptype_t *tmp = NULL;
 
 		/* Check syntax */
 		if (!args_help) {
 			fprintf(stderr, CLISH_XML_ERROR_ATTR("args_help"));
 			goto error;
 		}
-		tmp = clish_shell_find_ptype(shell, "internal_ARGS");
-		assert(tmp);
-		param = clish_param_new(args_name, args_help, tmp);
+		param = clish_param_new(args_name, args_help, "__ptype_ARGS");
 		clish_command__set_args(cmd, param);
 	}
 
@@ -554,23 +505,8 @@ process_command(clish_shell_t * shell, clish_xmlnode_t * element, void *parent)
 	else
 		clish_command__set_interrupt(cmd, BOOL_FALSE);
 
-	/* Set alias */
-	if (alias_name) {
-		/* Check syntax */
-		if (!alias_view) {
-			fprintf(stderr, CLISH_XML_ERROR_STR"Can't find reference VIEW.\n");
-			lub_string_free(alias_name);
-			goto error;
-		}
-		if ((alias_view == v) && (!strcmp(alias_name, name))) {
-			fprintf(stderr, CLISH_XML_ERROR_STR"The COMMAND with reference to itself.\n");
-			lub_string_free(alias_name);
-			goto error;
-		}
-		clish_command__set_alias(cmd, alias_name);
-		clish_command__set_alias_view(cmd, alias_view);
-		lub_string_free(alias_name);
-	}
+	if (access)
+		clish_command__set_access(cmd, access);
 
 //process_command_end:
 	res = process_children(shell, element, cmd);
@@ -591,8 +527,8 @@ error:
 }
 
 /* ------------------------------------------------------ */
-static int
-process_startup(clish_shell_t * shell, clish_xmlnode_t * element, void *parent)
+static int process_startup(clish_shell_t *shell, clish_xmlnode_t *element,
+	void *parent)
 {
 	clish_view_t *v = (clish_view_t *) parent;
 	clish_command_t *cmd = NULL;
@@ -667,181 +603,186 @@ error:
 }
 
 /* ------------------------------------------------------ */
-static int
-process_param(clish_shell_t * shell, clish_xmlnode_t * element, void *parent)
+static int process_param(clish_shell_t *shell, clish_xmlnode_t *element,
+	void *parent)
 {
 	clish_command_t *cmd = NULL;
 	clish_param_t *p_param = NULL;
 	clish_xmlnode_t *pelement;
+	clish_param_t *param;
 	char *pname;
 	int res = -1;
 
+	char *name = clish_xmlnode_fetch_attr(element, "name");
+	char *help = clish_xmlnode_fetch_attr(element, "help");
+	char *ptype = clish_xmlnode_fetch_attr(element, "ptype");
+	char *prefix = clish_xmlnode_fetch_attr(element, "prefix");
+	char *defval = clish_xmlnode_fetch_attr(element, "default");
+	char *mode = clish_xmlnode_fetch_attr(element, "mode");
+	char *optional = clish_xmlnode_fetch_attr(element, "optional");
+	char *order = clish_xmlnode_fetch_attr(element, "order");
+	char *value = clish_xmlnode_fetch_attr(element, "value");
+	char *hidden = clish_xmlnode_fetch_attr(element, "hidden");
+	char *test = clish_xmlnode_fetch_attr(element, "test");
+	char *completion = clish_xmlnode_fetch_attr(element, "completion");
+	char *access = clish_xmlnode_fetch_attr(element, "access");
+
+	/* The PARAM can be child of COMMAND or another PARAM */
 	pelement = clish_xmlnode_parent(element);
 	pname = clish_xmlnode_get_all_name(pelement);
-
 	if (pname && lub_string_nocasecmp(pname, "PARAM") == 0)
 		p_param = (clish_param_t *)parent;
 	else
 		cmd = (clish_command_t *)parent;
-
 	if (pname)
 		free(pname);
+	if (!cmd && !p_param)
+		goto error;
 
-	if (cmd || p_param) {
-		char *name = clish_xmlnode_fetch_attr(element, "name");
-		char *help = clish_xmlnode_fetch_attr(element, "help");
-		char *ptype = clish_xmlnode_fetch_attr(element, "ptype");
-		char *prefix = clish_xmlnode_fetch_attr(element, "prefix");
-		char *defval = clish_xmlnode_fetch_attr(element, "default");
-		char *mode = clish_xmlnode_fetch_attr(element, "mode");
-		char *optional = clish_xmlnode_fetch_attr(element, "optional");
-		char *order = clish_xmlnode_fetch_attr(element, "order");
-		char *value = clish_xmlnode_fetch_attr(element, "value");
-		char *hidden = clish_xmlnode_fetch_attr(element, "hidden");
-		char *test = clish_xmlnode_fetch_attr(element, "test");
-		char *completion = clish_xmlnode_fetch_attr(element, "completion");
-		clish_param_t *param;
-		clish_ptype_t *tmp = NULL;
+	/* Check syntax */
+	if (cmd && (cmd == shell->startup)) {
+		fprintf(stderr, CLISH_XML_ERROR_STR"STARTUP can't contain PARAMs.\n");
+		goto error;
+	}
+	if (!name) {
+		fprintf(stderr, CLISH_XML_ERROR_ATTR("name"));
+		goto error;
+	}
+	if (!help) {
+		fprintf(stderr, CLISH_XML_ERROR_ATTR("help"));
+		goto error;
+	}
+	if (!ptype) {
+		fprintf(stderr, CLISH_XML_ERROR_ATTR("ptype"));
+		goto error;
+	}
 
-		/* Check syntax */
-		if (cmd && (cmd == shell->startup)) {
-			fprintf(stderr, CLISH_XML_ERROR_STR"STARTUP can't contain PARAMs.\n");
-			goto error;
-		}
-		if (!name) {
-			fprintf(stderr, CLISH_XML_ERROR_ATTR("name"));
-			goto error;
-		}
-		if (!help) {
-			fprintf(stderr, CLISH_XML_ERROR_ATTR("help"));
-			goto error;
-		}
-		if (!ptype) {
-			fprintf(stderr, CLISH_XML_ERROR_ATTR("ptype"));
-			goto error;
-		}
+	param = clish_param_new(name, help, ptype);
 
-		if (*ptype) {
-			tmp = clish_shell_find_create_ptype(shell, ptype,
-				NULL, NULL,
-				CLISH_PTYPE_REGEXP,
-				CLISH_PTYPE_NONE);
-		}
-		param = clish_param_new(name, help, tmp);
+	/* If prefix is set clish will emulate old optional
+	 * command syntax over newer optional command mechanism.
+	 * It will create nested PARAM.
+	 */
+	if (prefix) {
+		const char *ptype_name = "__ptype_SUBCOMMAND";
+		clish_param_t *opt_param = NULL;
+		char *str = NULL;
+		clish_ptype_t *tmp;
 
-		/* If prefix is set clish will emulate old optional
-		 * command syntax over newer optional command mechanism.
-		 * It will create nested PARAM.
+		/* Create a ptype for prefix-named subcommand that
+		 * will contain the nested optional parameter. The
+		 * name of ptype is hardcoded. It's not good but
+		 * it's only the service ptype.
 		 */
-		if (prefix) {
-			const char *ptype_name = "__SUBCOMMAND";
-			clish_param_t *opt_param = NULL;
+		tmp = (clish_ptype_t *)lub_bintree_find(
+			&shell->ptype_tree, ptype_name);
+		if (!tmp)
+			tmp = clish_shell_find_create_ptype(shell,
+				ptype_name, "Option", "[^\\\\]+",
+				CLISH_PTYPE_REGEXP, CLISH_PTYPE_NONE);
+		assert(tmp);
+		lub_string_cat(&str, "_prefix_");
+		lub_string_cat(&str, name);
+		opt_param = clish_param_new(str, help, ptype_name);
+		lub_string_free(str);
+		clish_param__set_mode(opt_param,
+			CLISH_PARAM_SUBCOMMAND);
+		clish_param__set_value(opt_param, prefix);
+		clish_param__set_optional(opt_param, BOOL_TRUE);
 
-			/* Create a ptype for prefix-named subcommand that
-			 * will contain the nested optional parameter. The
-			 * name of ptype is hardcoded. It's not good but
-			 * it's only the service ptype.
-			 */
-			tmp = (clish_ptype_t *)lub_bintree_find(
-				&shell->ptype_tree, ptype_name);
-			if (!tmp)
-				tmp = clish_shell_find_create_ptype(shell,
-					ptype_name, "Option", "[^\\\\]+",
-					CLISH_PTYPE_REGEXP, CLISH_PTYPE_NONE);
-			opt_param = clish_param_new(prefix, help, tmp);
-			clish_param__set_mode(opt_param,
-				CLISH_PARAM_SUBCOMMAND);
-			clish_param__set_optional(opt_param, BOOL_TRUE);
+		if (test)
+			clish_param__set_test(opt_param, test);
 
-			if (test)
-				clish_param__set_test(opt_param, test);
+		/* Add the parameter to the command */
+		if (cmd)
+			clish_command_insert_param(cmd, opt_param);
+		/* Add the parameter to the param */
+		if (p_param)
+			clish_param_insert_param(p_param, opt_param);
+		/* Unset cmd and set parent param to opt_param */
+		cmd = NULL;
+		p_param = opt_param;
+	}
 
-			/* add the parameter to the command */
-			if (cmd)
-				clish_command_insert_param(cmd, opt_param);
-			/* add the parameter to the param */
-			if (p_param)
-				clish_param_insert_param(p_param, opt_param);
-			/* Unset cmd and set parent param to opt_param */
-			cmd = NULL;
-			p_param = opt_param;
-		}
+	if (defval)
+		clish_param__set_default(param, defval);
 
-		if (defval)
-			clish_param__set_default(param, defval);
+	if (hidden && lub_string_nocasecmp(hidden, "true") == 0)
+		clish_param__set_hidden(param, BOOL_TRUE);
+	else
+		clish_param__set_hidden(param, BOOL_FALSE);
 
-		if (hidden && lub_string_nocasecmp(hidden, "true") == 0)
+	if (mode) {
+		if (lub_string_nocasecmp(mode, "switch") == 0) {
+			clish_param__set_mode(param,
+				CLISH_PARAM_SWITCH);
+			/* Force hidden attribute */
 			clish_param__set_hidden(param, BOOL_TRUE);
-		else
-			clish_param__set_hidden(param, BOOL_FALSE);
-
-		if (mode) {
-			if (lub_string_nocasecmp(mode, "switch") == 0) {
-				clish_param__set_mode(param,
-					CLISH_PARAM_SWITCH);
-				/* Force hidden attribute */
-				clish_param__set_hidden(param, BOOL_TRUE);
-			} else if (lub_string_nocasecmp(mode, "subcommand") == 0)
-				clish_param__set_mode(param,
-					CLISH_PARAM_SUBCOMMAND);
-			else
-				clish_param__set_mode(param,
-					CLISH_PARAM_COMMON);
-		}
-
-		if (optional && lub_string_nocasecmp(optional, "true") == 0)
-			clish_param__set_optional(param, BOOL_TRUE);
-		else
-			clish_param__set_optional(param, BOOL_FALSE);
-
-		if (order && lub_string_nocasecmp(order, "true") == 0)
-			clish_param__set_order(param, BOOL_TRUE);
-		else
-			clish_param__set_order(param, BOOL_FALSE);
-
-		if (value) {
-			clish_param__set_value(param, value);
-			/* Force mode to subcommand */
+		} else if (lub_string_nocasecmp(mode, "subcommand") == 0)
 			clish_param__set_mode(param,
 				CLISH_PARAM_SUBCOMMAND);
-		}
-
-		if (test && !prefix)
-			clish_param__set_test(param, test);
-
-		if (completion)
-			clish_param__set_completion(param, completion);
-
-		/* add the parameter to the command */
-		if (cmd)
-			clish_command_insert_param(cmd, param);
-
-		/* add the parameter to the param */
-		if (p_param)
-			clish_param_insert_param(p_param, param);
-
-		res = process_children(shell, element, param);
-error:
-		clish_xml_release(name);
-		clish_xml_release(help);
-		clish_xml_release(ptype);
-		clish_xml_release(prefix);
-		clish_xml_release(defval);
-		clish_xml_release(mode);
-		clish_xml_release(optional);
-		clish_xml_release(order);
-		clish_xml_release(value);
-		clish_xml_release(hidden);
-		clish_xml_release(test);
-		clish_xml_release(completion);
+		else
+			clish_param__set_mode(param,
+				CLISH_PARAM_COMMON);
 	}
+
+	if (optional && lub_string_nocasecmp(optional, "true") == 0)
+		clish_param__set_optional(param, BOOL_TRUE);
+	else
+		clish_param__set_optional(param, BOOL_FALSE);
+
+	if (order && lub_string_nocasecmp(order, "true") == 0)
+		clish_param__set_order(param, BOOL_TRUE);
+	else
+		clish_param__set_order(param, BOOL_FALSE);
+
+	if (value) {
+		clish_param__set_value(param, value);
+		/* Force mode to subcommand */
+		clish_param__set_mode(param,
+			CLISH_PARAM_SUBCOMMAND);
+	}
+
+	if (test && !prefix)
+		clish_param__set_test(param, test);
+
+	if (completion)
+		clish_param__set_completion(param, completion);
+
+	if (access)
+		clish_param__set_access(param, access);
+
+	/* Add the parameter to the command */
+	if (cmd)
+		clish_command_insert_param(cmd, param);
+
+	/* Add the parameter to the param */
+	if (p_param)
+		clish_param_insert_param(p_param, param);
+
+	res = process_children(shell, element, param);
+
+error:
+	clish_xml_release(name);
+	clish_xml_release(help);
+	clish_xml_release(ptype);
+	clish_xml_release(prefix);
+	clish_xml_release(defval);
+	clish_xml_release(mode);
+	clish_xml_release(optional);
+	clish_xml_release(order);
+	clish_xml_release(value);
+	clish_xml_release(hidden);
+	clish_xml_release(test);
+	clish_xml_release(completion);
+	clish_xml_release(access);
 
 	return res;
 }
 
 /* ------------------------------------------------------ */
-static int
-process_action(clish_shell_t *shell, clish_xmlnode_t *element, void *parent)
+static int process_action(clish_shell_t *shell, clish_xmlnode_t *element,
+	void *parent)
 {
 	clish_action_t *action = NULL;
 	char *builtin = clish_xmlnode_fetch_attr(element, "builtin");
@@ -885,8 +826,8 @@ process_action(clish_shell_t *shell, clish_xmlnode_t *element, void *parent)
 }
 
 /* ------------------------------------------------------ */
-static int
-process_detail(clish_shell_t * shell, clish_xmlnode_t * element, void *parent)
+static int process_detail(clish_shell_t *shell, clish_xmlnode_t *element,
+	void *parent)
 {
 	clish_command_t *cmd = (clish_command_t *) parent;
 
@@ -901,14 +842,16 @@ process_detail(clish_shell_t * shell, clish_xmlnode_t * element, void *parent)
 	if (text)
 		free(text);
 
+	shell = shell; /* Happy compiler */
+
 	return 0;
 }
 
 /* ------------------------------------------------------ */
-static int
-process_namespace(clish_shell_t * shell, clish_xmlnode_t * element, void *parent)
+static int process_namespace(clish_shell_t *shell, clish_xmlnode_t *element,
+	void *parent)
 {
-	clish_view_t *v = (clish_view_t *) parent;
+	clish_view_t *v = (clish_view_t *)parent;
 	clish_nspace_t *nspace = NULL;
 	int res = -1;
 
@@ -921,30 +864,19 @@ process_namespace(clish_shell_t * shell, clish_xmlnode_t * element, void *parent
 	char *inherit = clish_xmlnode_fetch_attr(element, "inherit");
 	char *access = clish_xmlnode_fetch_attr(element, "access");
 
-//	int allowed = 1;
-
-//	if (access) {
-//		allowed = 0;
-//		if (shell->hooks->access_fn)
-//			allowed = shell->hooks->access_fn(shell, access);
-//	}
-//	if (!allowed)
-//		goto process_namespace_end;
-
 	/* Check syntax */
 	if (!view) {
 		fprintf(stderr, CLISH_XML_ERROR_ATTR("ref"));
 		goto error;
 	}
 
-	clish_view_t *ref_view = clish_shell_find_create_view(shell,
-		view, NULL);
+	clish_view_t *ref_view = clish_shell_find_view(shell, view);
 
 	/* Don't include itself without prefix */
 	if ((ref_view == v) && !prefix)
 		goto process_namespace_end;
 
-	nspace = clish_nspace_new(ref_view);
+	nspace = clish_nspace_new(view);
 	clish_view_insert_nspace(v, nspace);
 
 	if (prefix) {
@@ -979,6 +911,9 @@ process_namespace(clish_shell_t * shell, clish_xmlnode_t * element, void *parent
 	else
 		clish_nspace__set_inherit(nspace, BOOL_TRUE);
 
+	if (access)
+		clish_nspace__set_access(nspace, access);
+
 process_namespace_end:
 	res = 0;
 error:
@@ -995,8 +930,8 @@ error:
 }
 
 /* ------------------------------------------------------ */
-static int
-process_config(clish_shell_t * shell, clish_xmlnode_t * element, void *parent)
+static int process_config(clish_shell_t *shell, clish_xmlnode_t *element,
+	void *parent)
 {
 	clish_command_t *cmd = (clish_command_t *)parent;
 	clish_config_t *config;
@@ -1080,12 +1015,14 @@ process_config(clish_shell_t * shell, clish_xmlnode_t * element, void *parent)
 	clish_xml_release(unique);
 	clish_xml_release(depth);
 
+	shell = shell; /* Happy compiler */
+
 	return 0;
 }
 
 /* ------------------------------------------------------ */
-static int
-process_var(clish_shell_t * shell, clish_xmlnode_t * element, void *parent)
+static int process_var(clish_shell_t *shell, clish_xmlnode_t *element,
+	void *parent)
 {
 	clish_var_t *var = NULL;
 	int res = -1;
@@ -1122,12 +1059,13 @@ error:
 	clish_xml_release(dynamic);
 	clish_xml_release(value);
 
+	parent = parent; /* Happy compiler */
+
 	return res;
 }
 
 /* ------------------------------------------------------ */
-static int
-process_wdog(clish_shell_t *shell,
+static int process_wdog(clish_shell_t *shell,
 	clish_xmlnode_t *element, void *parent)
 {
 	clish_view_t *v = (clish_view_t *)parent;
@@ -1153,8 +1091,8 @@ error:
 }
 
 /* ------------------------------------------------------ */
-static int
-process_hotkey(clish_shell_t *shell, clish_xmlnode_t* element, void *parent)
+static int process_hotkey(clish_shell_t *shell, clish_xmlnode_t *element,
+	void *parent)
 {
 	clish_view_t *v = (clish_view_t *)parent;
 	int res = -1;
@@ -1179,27 +1117,42 @@ error:
 	clish_xml_release(key);
 	clish_xml_release(cmd);
 
+	shell = shell; /* Happy compiler */
+
 	return res;
 }
 
 /* ------------------------------------------------------ */
-static int
-process_plugin(clish_shell_t *shell, clish_xmlnode_t* element, void *parent)
+static int process_plugin(clish_shell_t *shell, clish_xmlnode_t *element,
+	void *parent)
 {
 	clish_plugin_t *plugin;
 	char *file = clish_xmlnode_fetch_attr(element, "file");
 	char *name = clish_xmlnode_fetch_attr(element, "name");
+	char *alias = clish_xmlnode_fetch_attr(element, "alias");
 	int res = -1;
 	char *text;
 
 	/* Check syntax */
-	if (!file) {
-		fprintf(stderr, CLISH_XML_ERROR_ATTR("file"));
+	if (!name) {
+		fprintf(stderr, CLISH_XML_ERROR_ATTR("name"));
 		goto error;
 	}
 
-	plugin = clish_plugin_new(file, name); /* Really - the name is alias */
+	plugin = clish_shell_find_plugin(shell, name);
+	if (plugin) {
+		fprintf(stderr,
+			CLISH_XML_ERROR_STR"PLUGIN %s duplication.\n", name);
+		goto error;
+	}
+	plugin = clish_plugin_new(name);
 	lub_list_add(shell->plugins, plugin);
+
+	if (alias && *alias)
+		clish_plugin__set_alias(plugin, alias);
+
+	if (file && *file)
+		clish_plugin__set_file(plugin, file);
 
 	/* Get PLUGIN body content */
 	text = clish_xmlnode_get_all_content(element);
@@ -1212,13 +1165,16 @@ process_plugin(clish_shell_t *shell, clish_xmlnode_t* element, void *parent)
 error:
 	clish_xml_release(file);
 	clish_xml_release(name);
+	clish_xml_release(alias);
+
+	parent = parent; /* Happy compiler */
 
 	return res;
 }
 
 /* ------------------------------------------------------ */
-static int
-process_hook(clish_shell_t *shell, clish_xmlnode_t* element, void *parent)
+static int process_hook(clish_shell_t *shell, clish_xmlnode_t *element,
+	void *parent)
 {
 	char *name = clish_xmlnode_fetch_attr(element, "name");
 	char *builtin = clish_xmlnode_fetch_attr(element, "builtin");
@@ -1257,6 +1213,8 @@ process_hook(clish_shell_t *shell, clish_xmlnode_t* element, void *parent)
 error:
 	clish_xml_release(name);
 	clish_xml_release(builtin);
+
+	parent = parent; /* Happy compiler */
 
 	return res;
 }

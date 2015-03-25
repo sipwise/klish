@@ -1,6 +1,11 @@
 /*
  * plugin.c
  */
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "private.h"
 #include "lub/string.h"
 #include "lub/list.h"
@@ -9,7 +14,9 @@
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
+#ifdef HAVE_DLFCN_H
 #include <dlfcn.h>
+#endif
 
 /**********************************************************
  * SYM functions                                          *
@@ -127,16 +134,17 @@ int clish_sym_clone(clish_sym_t *dst, clish_sym_t *src)
  **********************************************************/
 
 /*--------------------------------------------------------- */
-clish_plugin_t *clish_plugin_new(const char *file, const char *alias)
+clish_plugin_t *clish_plugin_new(const char *name)
 {
 	clish_plugin_t *this;
 
 	this = malloc(sizeof(*this));
 
-	this->file = lub_string_dup(file);
-	this->name = NULL;
+	this->name = lub_string_dup(name);
 	this->conf = NULL;
-	this->alias = lub_string_dup(alias);
+	this->alias = NULL;
+	this->file = NULL;
+	this->builtin_flag = BOOL_FALSE; /* The plugin is shared object by default */
 	this->dlhan = NULL;
 	/* Initialise the list of symbols */
 	this->syms = lub_list_new(clish_sym_compare);
@@ -159,9 +167,9 @@ void clish_plugin_free(clish_plugin_t *this, void *userdata)
 	if (this->fini)
 		this->fini(userdata, this);
 
-	lub_string_free(this->file);
 	lub_string_free(this->name);
 	lub_string_free(this->alias);
+	lub_string_free(this->file);
 	lub_string_free(this->conf);
 
 	/* Free symbol list */
@@ -173,9 +181,10 @@ void clish_plugin_free(clish_plugin_t *this, void *userdata)
 		lub_list_node_free(iter);
 	}
 	lub_list_free(this->syms);
+#ifdef HAVE_DLFCN_H
 	if (this->dlhan)
 		dlclose(this->dlhan);
-
+#endif
 	free(this);
 }
 
@@ -231,6 +240,32 @@ clish_sym_t *clish_plugin_add_phook(clish_plugin_t *this,
 }
 
 /*--------------------------------------------------------- */
+void clish_plugin_add_fini(clish_plugin_t *this,
+	clish_plugin_fini_t *fini)
+{
+	this->fini = fini;
+}
+
+/*--------------------------------------------------------- */
+clish_plugin_fini_t * clish_plugin_get_fini(clish_plugin_t *this)
+{
+	return this->fini;
+}
+
+/*--------------------------------------------------------- */
+void clish_plugin_add_init(clish_plugin_t *this,
+	clish_plugin_init_t *init)
+{
+	this->init = init;
+}
+
+/*--------------------------------------------------------- */
+clish_plugin_init_t * clish_plugin_get_init(clish_plugin_t *this)
+{
+	return this->init;
+}
+
+/*--------------------------------------------------------- */
 clish_sym_t *clish_plugin_get_sym(clish_plugin_t *this, const char *name, int type)
 {
 	lub_list_node_t *iter;
@@ -252,44 +287,75 @@ clish_sym_t *clish_plugin_get_sym(clish_plugin_t *this, const char *name, int ty
 }
 
 /*--------------------------------------------------------- */
+static int clish_plugin_load_shared(clish_plugin_t *this)
+{
+#ifdef HAVE_DLFCN_H
+	char *file = NULL; /* Plugin so file name */
+	char *init_name = NULL; /* Init function name */
+
+	if (this->file) {
+		file = lub_string_dup(this->file);
+	} else {
+		lub_string_cat(&file, "clish_plugin_");
+		lub_string_cat(&file, this->name);
+		lub_string_cat(&file, ".so");
+	}
+
+	/* Open dynamic library */
+	this->dlhan = dlopen(file, RTLD_NOW | RTLD_LOCAL);
+	lub_string_free(file);
+	if (!this->dlhan) {
+		fprintf(stderr, "Error: Can't open plugin \"%s\": %s\n",
+			this->name, dlerror());
+		return -1;
+	}
+
+	/* Get plugin init function */
+	lub_string_cat(&init_name, CLISH_PLUGIN_INIT_NAME_PREFIX);
+	lub_string_cat(&init_name, this->name);
+	lub_string_cat(&init_name, CLISH_PLUGIN_INIT_NAME_SUFFIX);
+	this->init = (clish_plugin_init_t *)dlsym(this->dlhan, init_name);
+	lub_string_free(init_name);
+	if (!this->init) {
+		fprintf(stderr, "Error: Can't get plugin \"%s\" init function: %s\n",
+			this->name, dlerror());
+		return -1;
+	}
+
+	return 0;
+#else /* HAVE_DLFCN_H */
+	/* We have no any dl functions. */
+	fprintf(stderr, "Error: Can't get plugin \"%s\" init function.\n",
+		this->name);
+	return -1;
+#endif /* HAVE_DLFCN_H */
+}
+
+/*--------------------------------------------------------- */
 int clish_plugin_load(clish_plugin_t *this, void *userdata)
 {
 	int res;
 
 	if (!this)
 		return -1;
+	assert(this->name);
 
-	/* Open dynamic library */
-	if (!(this->dlhan = dlopen(this->file, RTLD_NOW | RTLD_LOCAL))) {
-		fprintf(stderr, "Error: Can't open plugin %s: %s\n",
-			this->file, dlerror());
-		return -1;
+	/* Builtin plugins already have init function. */
+	if (!this->builtin_flag) {
+		if (clish_plugin_load_shared(this) < 0)
+			return -1;
 	}
-
-	/* Get plugin init function */
-	this->init = (clish_plugin_init_t *)dlsym(this->dlhan, CLISH_PLUGIN_INIT_NAME);
 	if (!this->init) {
-		fprintf(stderr, "Error: Can't get plugin %s init function: %s\n",
-			this->file, dlerror());
+		fprintf(stderr, "Error: PLUGIN %s has no init function\n",
+			this->name);
 		return -1;
 	}
-
-	/* Get plugin fini function */
-	this->fini = (clish_plugin_fini_t *)dlsym(this->dlhan, CLISH_PLUGIN_FINI_NAME);
-
 	/* Execute init function */
 	if ((res = this->init(userdata, this)))
 		fprintf(stderr, "Error: Plugin %s init retcode: %d\n",
-			this->file, res);
+			this->name, res);
 
 	return res;
-}
-
-/*--------------------------------------------------------- */
-void clish_plugin__set_name(clish_plugin_t *this, const char *name)
-{
-	lub_string_free(this->name);
-	this->name = lub_string_dup(name);
 }
 
 /*--------------------------------------------------------- */
@@ -318,9 +384,28 @@ char *clish_plugin__get_pubname(const clish_plugin_t *this)
 }
 
 /*--------------------------------------------------------- */
+void clish_plugin__set_file(clish_plugin_t *this, const char *file)
+{
+	lub_string_free(this->file);
+	this->file = lub_string_dup(file);
+}
+
+/*--------------------------------------------------------- */
 char *clish_plugin__get_file(const clish_plugin_t *this)
 {
 	return this->file;
+}
+
+/*--------------------------------------------------------- */
+void clish_plugin__set_builtin_flag(clish_plugin_t *this, bool_t builtin_flag)
+{
+	this->builtin_flag = builtin_flag;
+}
+
+/*--------------------------------------------------------- */
+bool_t clish_plugin__get_builtin_flag(const clish_plugin_t *this)
+{
+	return this->builtin_flag;
 }
 
 /*--------------------------------------------------------- */

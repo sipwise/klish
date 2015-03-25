@@ -10,8 +10,12 @@
 #include <sys/wait.h>
 #include <errno.h>
 #include <assert.h>
+#if WITH_INTERNAL_GETOPT
+#include "libc/getopt.h"
+#else
 #ifdef HAVE_GETOPT_H
 #include <getopt.h>
+#endif
 #endif
 
 #include "lub/types.h"
@@ -83,11 +87,11 @@ void konf_query_free(konf_query_t *this)
 /* Parse query */
 int konf_query_parse(konf_query_t *this, int argc, char **argv)
 {
-	unsigned i = 0;
+	int i = 0;
 	int pwdc = 0;
 
 	static const char *shortopts = "suoedtp:q:r:l:f:inh:";
-#ifdef HAVE_GETOPT_H
+#ifdef HAVE_GETOPT_LONG
 	static const struct option longopts[] = {
 		{"set",		0, NULL, 's'},
 		{"unset",	0, NULL, 'u'},
@@ -110,7 +114,7 @@ int konf_query_parse(konf_query_t *this, int argc, char **argv)
 	optind = 0; /* It must be 1 for QNX6. This system has no getopt.h */
 	while(1) {
 		int opt;
-#ifdef HAVE_GETOPT_H
+#ifdef HAVE_GETOPT_LONG
 		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 #else
 		opt = getopt(argc, argv, shortopts);

@@ -14,7 +14,8 @@ nobase_include_HEADERS += \
     lub/types.h \
     lub/system.h \
     lub/db.h \
-    lub/ini.h
+    lub/ini.h \
+    lub/log.h
 
 EXTRA_DIST +=   \
     lub/argv/module.am \
@@ -26,6 +27,7 @@ EXTRA_DIST +=   \
     lub/system/module.am \
     lub/db/module.am \
     lub/ini/module.am \
+    lub/log/module.am \
     lub/README
 
 include $(top_srcdir)/lub/argv/module.am
@@ -37,3 +39,4 @@ include $(top_srcdir)/lub/string/module.am
 include $(top_srcdir)/lub/system/module.am
 include $(top_srcdir)/lub/db/module.am
 include $(top_srcdir)/lub/ini/module.am
+include $(top_srcdir)/lub/log/module.am

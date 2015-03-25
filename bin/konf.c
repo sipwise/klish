@@ -12,10 +12,15 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <signal.h>
+
+#if WITH_INTERNAL_GETOPT
+#include "libc/getopt.h"
+#else
 #ifdef HAVE_GETOPT_H
 #include <getopt.h>
 #endif
-#include <signal.h>
+#endif
 
 #include "konf/net.h"
 #include "konf/query.h"
@@ -41,14 +46,14 @@ int main(int argc, char **argv)
 	char *line = NULL;
 	char *str = NULL;
 	const char *socket_path = KONFD_SOCKET_PATH;
-	unsigned i = 0;
+	int i = 0;
 
 	/* Signal vars */
 	struct sigaction sigpipe_act;
 	sigset_t sigpipe_set;
 
 	static const char *shortopts = "hvs:";
-#ifdef HAVE_GETOPT_H
+#ifdef HAVE_GETOPT_LONG
 	static const struct option longopts[] = {
 		{"help",	0, NULL, 'h'},
 		{"version",	0, NULL, 'v'},
@@ -68,7 +73,7 @@ int main(int argc, char **argv)
 	/* Parse command line options */
 	while(1) {
 		int opt;
-#ifdef HAVE_GETOPT_H
+#ifdef HAVE_GETOPT_LONG
 		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 #else
 		opt = getopt(argc, argv, shortopts);

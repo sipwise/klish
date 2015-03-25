@@ -2,9 +2,7 @@
 
 EXTRA_DIST += \
 	plugins/lua/module.am \
-	plugins/default/module.am
+	plugins/clish/module.am
 
-include $(top_srcdir)/plugins/default/module.am
-if WITH_LUA
+include $(top_srcdir)/plugins/clish/module.am
 include $(top_srcdir)/plugins/lua/module.am
-endif

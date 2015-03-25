@@ -29,6 +29,9 @@
 #define CLISH_LOCK_PATH "/tmp/clish.lock"
 #define CLISH_LOCK_WAIT 20
 
+#define CLISH_XML_ERROR_STR "Error parsing XML: "
+#define CLISH_XML_ERROR_ATTR(attr) CLISH_XML_ERROR_STR"The \""attr"\" attribute is required.\n"
+
 typedef struct clish_shell_s clish_shell_t;
 typedef struct clish_context_s clish_context_t;
 
@@ -100,7 +103,6 @@ int clish_shell_execute(clish_context_t *context, char **out);
 int clish_shell_forceline(clish_shell_t *instance, const char *line, char ** out);
 int clish_shell_readline(clish_shell_t *instance, char ** out);
 void clish_shell_dump(clish_shell_t * instance);
-void clish_shell_close(clish_shell_t * instance);
 /**
  * Push the specified file handle on to the stack of file handles
  * for this shell. The specified file will become the source of 
@@ -160,8 +162,13 @@ void clish_shell__set_timeout(clish_shell_t *instance, int timeout);
 char *clish_shell__get_line(clish_context_t *context);
 char *clish_shell__get_full_line(clish_context_t *context);
 char *clish_shell__get_params(clish_context_t *context);
+
+/* Log functions */
 void clish_shell__set_log(clish_shell_t *instance, bool_t log);
 bool_t clish_shell__get_log(const clish_shell_t *instance);
+void clish_shell__set_facility(clish_shell_t *instance, int facility);
+int clish_shell__get_facility(clish_shell_t *instance);
+
 int clish_shell_wdog(clish_shell_t *instance);
 void clish_shell__set_wdog_timeout(clish_shell_t *instance,
 	unsigned int timeout);
@@ -174,6 +181,10 @@ void clish_shell__set_dryrun(clish_shell_t *instance, bool_t dryrun);
 bool_t clish_shell__get_dryrun(const clish_shell_t *instance);
 
 /* Plugin functions */
+clish_plugin_t * clish_shell_find_plugin(clish_shell_t *instance,
+	const char *name);
+clish_plugin_t * clish_shell_find_create_plugin(clish_shell_t *instance,
+	const char *name);
 int clish_shell_load_plugins(clish_shell_t *instance);
 int clish_shell_link_plugins(clish_shell_t *instance);
 
@@ -188,7 +199,6 @@ clish_sym_t *clish_shell_get_hook(const clish_shell_t *instance, int type);
 
 /* Hook wrappers */
 void *clish_shell_check_hook(const clish_context_t *clish_context, int type);
-CLISH_HOOK_ACCESS(clish_shell_exec_access);
 CLISH_HOOK_CONFIG(clish_shell_exec_config);
 CLISH_HOOK_LOG(clish_shell_exec_log);
 
@@ -197,6 +207,9 @@ void *clish_shell__get_udata(const clish_shell_t *instance, const char *name);
 void *clish_shell__del_udata(clish_shell_t *instance, const char *name);
 int clish_shell__set_udata(clish_shell_t *instance,
 	const char *name, void *data);
+
+/* Access functions */
+int clish_shell_prepare(clish_shell_t *instance);
 
 _END_C_DECL
 

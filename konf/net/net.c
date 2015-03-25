@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <string.h>
 #include <sys/un.h>
+#include <fcntl.h>
 
 #include "konf/buf.h"
 #include "konf/query.h"
@@ -64,6 +65,10 @@ int konf_client_connect(konf_client_t *this)
 
 	if ((this->sock = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
 		return this->sock;
+
+#ifdef FD_CLOEXEC
+	fcntl(this->sock, F_SETFD, fcntl(this->sock, F_GETFD) | FD_CLOEXEC);
+#endif
 
 	raddr.sun_family = AF_UNIX;
 	strncpy(raddr.sun_path, this->path, USOCK_PATH_MAX);

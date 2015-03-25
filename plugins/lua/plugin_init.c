@@ -1,9 +1,9 @@
-#include <lub/ini.h>
-#include <lub/string.h>
+#include "lub/ini.h"
+#include "lub/string.h"
 
 #include "private.h"
 
-CLISH_PLUGIN_INIT
+CLISH_PLUGIN_INIT(lua)
 {
 	lub_ini_t *ini;
 	char *conf = clish_plugin__get_conf(plugin);
@@ -19,8 +19,7 @@ CLISH_PLUGIN_INIT
 	if(clish_plugin_init_lua(clish_shell))
 		return (-1);
 
-	clish_plugin__set_name(plugin, LUA_PLUGIN_NAME);
-
+	clish_plugin_add_fini(plugin, clish_plugin_lua_fini);
 	clish_plugin_add_sym(plugin, clish_plugin_lua_action, "lua");
 
 	return 0;

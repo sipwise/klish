@@ -55,6 +55,7 @@ konf_buf_init(konf_buf_t * this, int fd)
 	this->size = KONF_BUF_CHUNK;
 	this->pos = 0;
 	this->rpos = 0;
+	this->data = NULL;
 
 	/* Be a good binary tree citizen */
 	lub_bintree_node_init(&this->bt_node);
@@ -145,7 +146,7 @@ int konf_buf_read(konf_buf_t *this)
 /*--------------------------------------------------------- */
 char * konf_buf_string(char *buf, int len)
 {
-	unsigned i;
+	int i;
 	char *str;
 
 	for (i = 0; i < len; i++) {
@@ -238,6 +239,18 @@ char * konf_buf__dup_line(const konf_buf_t *this)
 	return str;
 }
 
+/*--------------------------------------------------------- */
+void * konf_buf__get_data(const konf_buf_t *this)
+{
+	return this->data;
+}
+
+/*--------------------------------------------------------- */
+void konf_buf__set_data(konf_buf_t *this, void *data)
+{
+	this->data = data;
+}
+
 /*---------------------------------------------------------
  * buftree functions
  *--------------------------------------------------------- */
@@ -291,3 +304,4 @@ char * konf_buftree_parse(lub_bintree_t * this,
 
 	return konf_buf_parse(buf);
 }
+
