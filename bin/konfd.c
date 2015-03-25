@@ -24,9 +24,15 @@
 #include <sys/select.h>
 #include <signal.h>
 #include <syslog.h>
+
+#if WITH_INTERNAL_GETOPT
+#include "libc/getopt.h"
+#else
 #ifdef HAVE_GETOPT_H
 #include <getopt.h>
 #endif
+#endif
+
 #ifdef HAVE_PWD_H
 #include <pwd.h>
 #endif
@@ -40,6 +46,7 @@
 #include "konf/net.h"
 #include "lub/argv.h"
 #include "lub/string.h"
+#include "lub/log.h"
 
 #ifndef VERSION
 #define VERSION 1.2.2
@@ -63,29 +70,33 @@ static volatile int sigterm = 0;
 static void sighandler(int signo);
 
 static void help(int status, const char *argv0);
-static char * process_query(int sock, konf_tree_t * conf, char *str);
-int answer_send(int sock, char *command);
+static char * process_query(konf_buf_t *tbuf, konf_tree_t * conf, char *str);
+int answer_send(int sock, const char *command);
 static int dump_running_config(int sock, konf_tree_t *conf, konf_query_t *query);
 int daemonize(int nochdir, int noclose);
 struct options *opts_init(void);
 void opts_free(struct options *opts);
 static int opts_parse(int argc, char *argv[], struct options *opts);
+static int create_listen_socket(const char *path,
+	uid_t uid, gid_t gid, mode_t mode);
 
 /* Command line options */
 struct options {
 	char *socket_path;
+	char *ro_path;
 	char *pidfile;
 	char *chroot;
 	int debug; /* Don't daemonize in debug mode */
 	uid_t uid;
 	gid_t gid;
+	int log_facility;
 };
 
 /*--------------------------------------------------------- */
 int main(int argc, char **argv)
 {
 	int retval = -1;
-	unsigned i;
+	int i;
 	char *str;
 	konf_tree_t *conf;
 	lub_bintree_t bufs;
@@ -95,22 +106,22 @@ int main(int argc, char **argv)
 
 	/* Network vars */
 	int sock = -1;
-	struct sockaddr_un laddr;
+	int ro_sock = -1;
 	struct sockaddr_un raddr;
 	fd_set active_fd_set, read_fd_set;
-	const int reuseaddr = 1;
 
 	/* Signal vars */
 	struct sigaction sig_act, sigpipe_act;
 	sigset_t sig_set, sigpipe_set;
 
-	/* Initialize syslog */
-	openlog(argv[0], LOG_CONS, LOG_DAEMON);
-
 	/* Parse command line options */
 	opts = opts_init();
 	if (opts_parse(argc, argv, opts))
 		goto err;
+
+	/* Initialize syslog */
+	openlog(argv[0], LOG_CONS, opts->log_facility);
+	syslog(LOG_ERR, "Start daemon.\n");
 
 	/* Fork the daemon */
 	if (!opts->debug) {
@@ -129,6 +140,7 @@ int main(int argc, char **argv)
 		} else {
 			char str[20];
 			snprintf(str, sizeof(str), "%u\n", getpid());
+			str[sizeof(str) - 1] = '\0';
 			if (write(pidfd, str, strlen(str)) < 0)
 				syslog(LOG_WARNING, "Can't write to %s: %s",
 					opts->pidfile, strerror(errno));
@@ -136,31 +148,17 @@ int main(int argc, char **argv)
 		}
 	}
 
-	/* Create listen socket */
-	if ((sock = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-		syslog(LOG_ERR, "Can't create listen socket: %s\n",
-			strerror(errno));
+	/* Create RW listen socket */
+	if ((sock = create_listen_socket(opts->socket_path,
+		opts->uid, opts->gid, 0660)) == -1) {
 		goto err;
 	}
-	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR,
-		&reuseaddr, sizeof(reuseaddr))) {
-		syslog(LOG_ERR, "Can't set socket options: %s\n", strerror(errno));
+
+	/* Create RO listen socket */
+	if (opts->ro_path && (ro_sock = create_listen_socket(opts->ro_path,
+		opts->uid, opts->gid, 0666)) == -1) {
 		goto err;
 	}
-	laddr.sun_family = AF_UNIX;
-	strncpy(laddr.sun_path, opts->socket_path, USOCK_PATH_MAX);
-	laddr.sun_path[USOCK_PATH_MAX - 1] = '\0';
-	if (bind(sock, (struct sockaddr *)&laddr, sizeof(laddr))) {
-		syslog(LOG_ERR, "Can't bind socket: %s\n",
-			strerror(errno));
-		goto err;
-	}
-	if (chown(opts->socket_path, opts->uid, opts->gid)) {
-		syslog(LOG_ERR, "Can't chown UNIX socket: %s\n",
-			strerror(errno));
-		goto err;
-	}
-	listen(sock, 5);
 
 	/* Change GID */
 	if (opts->gid != getgid()) {
@@ -223,6 +221,8 @@ int main(int argc, char **argv)
 	/* Initialize the set of active sockets. */
 	FD_ZERO(&active_fd_set);
 	FD_SET(sock, &active_fd_set);
+	if (ro_sock >= 0)
+		FD_SET(ro_sock, &active_fd_set);
 
 	/* Main loop */
 	while (!sigterm) {
@@ -243,36 +243,45 @@ int main(int argc, char **argv)
 		for (i = 0; i < FD_SETSIZE; ++i) {
 			if (!FD_ISSET(i, &read_fd_set))
 				continue;
-			if (i == sock) {
-				/* Connection request on listen socket. */
+			/* Connection request on listen socket. */
+			if ((i == sock) || (i == ro_sock)) {
 				int new;
 				socklen_t size = sizeof(raddr);
-				new = accept(sock,
+				new = accept(i,
 					(struct sockaddr *)&raddr, &size);
 				if (new < 0) {
-					fprintf(stderr, "accept");
 					continue;
 				}
 #ifdef DEBUG
+				fprintf(stderr, "------------------------------\n");
 				fprintf(stderr, "Connection established %u\n", new);
 #endif
 				konf_buftree_remove(&bufs, new);
 				tbuf = konf_buf_new(new);
-				/* insert it into the binary tree for this conf */
+				/* Insert it into the binary tree */
 				lub_bintree_insert(&bufs, tbuf);
+				/* In a case of RW socket we use buf's data pointer
+				  to indicate RW or RO socket. NULL=RO, not-NULL=RW */
+				if (i == sock)
+					konf_buf__set_data(tbuf, (void *)1);
 				FD_SET(new, &active_fd_set);
 			} else {
 				int nbytes;
+
+				tbuf = konf_buftree_find(&bufs, i);
 				/* Data arriving on an already-connected socket. */
-				if ((nbytes = konf_buftree_read(&bufs, i)) <= 0) {
+				if ((nbytes = konf_buf_read(tbuf)) <= 0) {
 					close(i);
 					FD_CLR(i, &active_fd_set);
 					konf_buftree_remove(&bufs, i);
+#ifdef DEBUG
+					fprintf(stderr, "Connection closed %u\n", i);
+#endif
 					continue;
 				}
-				while ((str = konf_buftree_parse(&bufs, i))) {
+				while ((str = konf_buf_parse(tbuf))) {
 					char *answer;
-					if (!(answer = process_query(i, conf, str)))
+					if (!(answer = process_query(tbuf, conf, str)))
 						answer = strdup("-e");
 					free(str);
 					answer_send(i, answer);
@@ -295,10 +304,16 @@ int main(int argc, char **argv)
 
 	retval = 0;
 err:
-	/* Close listen socket */
+	/* Close RW socket */
 	if (sock >= 0) {
 		close(sock);
 		unlink(opts->socket_path);
+	}
+
+	/* Close RO socket */
+	if (ro_sock >= 0) {
+		close(ro_sock);
+		unlink(opts->ro_path);
 	}
 
 	/* Remove pidfile */
@@ -312,13 +327,63 @@ err:
 	/* Free command line options */
 	opts_free(opts);
 
+	syslog(LOG_ERR, "Stop daemon.\n");
+
 	return retval;
 }
 
-/*--------------------------------------------------------- */
-static char * process_query(int sock, konf_tree_t * conf, char *str)
+/*--------- Create listen socket--------------------------- */
+static int create_listen_socket(const char *path,
+	uid_t uid, gid_t gid, mode_t mode)
 {
-	unsigned i;
+	int sock = -1;
+	struct sockaddr_un laddr;
+	const int reuseaddr = 1;
+
+	if ((sock = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+		syslog(LOG_ERR, "Can't create socket: %s\n", strerror(errno));
+		goto err1;
+	}
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR,
+		&reuseaddr, sizeof(reuseaddr))) {
+		syslog(LOG_ERR, "Can't set socket options: %s\n", strerror(errno));
+		goto err1;
+	}
+	laddr.sun_family = AF_UNIX;
+	strncpy(laddr.sun_path, path, USOCK_PATH_MAX);
+	laddr.sun_path[USOCK_PATH_MAX - 1] = '\0';
+	if (bind(sock, (struct sockaddr *)&laddr, sizeof(laddr))) {
+		syslog(LOG_ERR, "Can't bind socket: %s\n", strerror(errno));
+		goto err1;
+	}
+	if (chown(path, uid, gid)) {
+		syslog(LOG_ERR, "Can't chown socket: %s\n", strerror(errno));
+		goto err2;
+	}
+	if (chmod(path, mode)) {
+		syslog(LOG_ERR, "Can't chmod socket: %s\n", strerror(errno));
+		goto err2;
+	}
+	if (listen(sock, 10)) {
+		syslog(LOG_ERR, "Can't listen socket: %s\n", strerror(errno));
+		goto err2;
+	}
+
+	return sock;
+
+err2:
+	unlink(path);
+err1:
+	if (sock >= 0)
+		close(sock);
+
+	return -1;
+}
+
+/*--------------------------------------------------------- */
+static char * process_query(konf_buf_t *tbuf, konf_tree_t * conf, char *str)
+{
+	int i;
 	int res;
 	konf_tree_t *iconf;
 	konf_tree_t *tmpconf;
@@ -327,7 +392,6 @@ static char * process_query(int sock, konf_tree_t * conf, char *str)
 	konf_query_op_t ret = KONF_QUERY_OP_ERROR;
 
 #ifdef DEBUG
-	fprintf(stderr, "----------------------\n");
 	fprintf(stderr, "REQUEST: %s\n", str);
 #endif
 	/* Parse query */
@@ -341,6 +405,16 @@ static char * process_query(int sock, konf_tree_t * conf, char *str)
 	konf_query_dump(query);
 #endif
 
+	/* Restrict RO socket for non-DUMP operation */
+	if (!konf_buf__get_data(tbuf) &&
+		(konf_query__get_op(query) != KONF_QUERY_OP_DUMP)) {
+#ifdef DEBUG
+		fprintf(stderr, "Permission denied. Read-only socket.\n");
+#endif
+		konf_query_free(query);
+		return NULL;
+	}
+
 	/* Go through the pwd */
 	iconf = conf;
 	for (i = 0; i < konf_query__get_pwdc(query); i++) {
@@ -352,7 +426,9 @@ static char * process_query(int sock, konf_tree_t * conf, char *str)
 	}
 
 	if (!iconf) {
-		fprintf(stderr, "Unknown path\n");
+#ifdef DEBUG
+		fprintf(stderr, "Unknown path.\n");
+#endif
 		konf_query_free(query);
 		return NULL;
 	}
@@ -399,7 +475,7 @@ static char * process_query(int sock, konf_tree_t * conf, char *str)
 		break;
 
 	case KONF_QUERY_OP_DUMP:
-		if (dump_running_config(sock, iconf, query))
+		if (dump_running_config(konf_buf__get_fd(tbuf), iconf, query))
 			break;
 		ret = KONF_QUERY_OP_OK;
 		break;
@@ -441,12 +517,18 @@ static char * process_query(int sock, konf_tree_t * conf, char *str)
  */
 static void sighandler(int signo)
 {
+	signo = signo; /* Happy compiler */
+
 	sigterm = 1;
 }
 
 /*--------------------------------------------------------- */
-int answer_send(int sock, char *command)
+int answer_send(int sock, const char *command)
 {
+	if (!command) {
+		errno = EINVAL;
+		return -1;
+	}
 	return send(sock, command, strlen(command) + 1, MSG_NOSIGNAL);
 }
 
@@ -504,8 +586,10 @@ int daemonize(int nochdir, int noclose)
 		_exit(0); /* Exit parent */
 	if (setsid() == -1)
 		return -1;
-	if (!nochdir)
-		chdir("/");
+	if (!nochdir) {
+		if (chdir("/"))
+			return -1;
+	}
 	if (!noclose) {
 		fd = open("/dev/null", O_RDWR, 0);
 		if (fd < 0)
@@ -513,7 +597,7 @@ int daemonize(int nochdir, int noclose)
 		dup2(fd, STDIN_FILENO);
 		dup2(fd, STDOUT_FILENO);
 		dup2(fd, STDERR_FILENO);
-		if (fd > 2)
+		if (fd > STDERR_FILENO)
 			close(fd);
 	}
 
@@ -530,10 +614,12 @@ struct options *opts_init(void)
 	assert(opts);
 	opts->debug = 0; /* daemonize by default */
 	opts->socket_path = strdup(KONFD_SOCKET_PATH);
+	opts->ro_path = NULL;
 	opts->pidfile = strdup(KONFD_PIDFILE);
 	opts->chroot = NULL;
 	opts->uid = getuid();
 	opts->gid = getgid();
+	opts->log_facility = LOG_DAEMON;
 
 	return opts;
 }
@@ -544,6 +630,8 @@ void opts_free(struct options *opts)
 {
 	if (opts->socket_path)
 		free(opts->socket_path);
+	if (opts->ro_path)
+		free(opts->ro_path);
 	if (opts->pidfile)
 		free(opts->pidfile);
 	if (opts->chroot)
@@ -555,24 +643,26 @@ void opts_free(struct options *opts)
 /* Parse command line options */
 static int opts_parse(int argc, char *argv[], struct options *opts)
 {
-	static const char *shortopts = "hvs:p:u:g:dr:";
-#ifdef HAVE_GETOPT_H
+	static const char *shortopts = "hvs:S:p:u:g:dr:O:";
+#ifdef HAVE_GETOPT_LONG
 	static const struct option longopts[] = {
 		{"help",	0, NULL, 'h'},
 		{"version",	0, NULL, 'v'},
 		{"socket",	1, NULL, 's'},
+		{"ro-socket",	1, NULL, 'S'},
 		{"pid",		1, NULL, 'p'},
 		{"user",	1, NULL, 'u'},
 		{"group",	1, NULL, 'g'},
 		{"debug",	0, NULL, 'd'},
 		{"chroot",	1, NULL, 'r'},
+		{"facility",	1, NULL, 'O'},
 		{NULL,		0, NULL, 0}
 	};
 #endif
 	optind = 1;
 	while(1) {
 		int opt;
-#ifdef HAVE_GETOPT_H
+#ifdef HAVE_GETOPT_LONG
 		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 #else
 		opt = getopt(argc, argv, shortopts);
@@ -585,6 +675,11 @@ static int opts_parse(int argc, char *argv[], struct options *opts)
 				free(opts->socket_path);
 			opts->socket_path = strdup(optarg);
 			break;
+		case 'S':
+			if (opts->ro_path)
+				free(opts->ro_path);
+			opts->ro_path = strdup(optarg);
+			break;
 		case 'p':
 			if (opts->pidfile)
 				free(opts->pidfile);
@@ -596,7 +691,7 @@ static int opts_parse(int argc, char *argv[], struct options *opts)
 				free(opts->chroot);
 			opts->chroot = strdup(optarg);
 #else
-			syslog(LOG_ERR, "The --chroot option is not supported\n");
+			fprintf(stderr, "Error: The --chroot option is not supported.\n");
 			return -1;
 #endif
 			break;
@@ -607,13 +702,13 @@ static int opts_parse(int argc, char *argv[], struct options *opts)
 #ifdef HAVE_PWD_H
 			struct passwd *pwd = getpwnam(optarg);
 			if (!pwd) {
-				syslog(LOG_ERR, "Can't identify user \"%s\"\n",
+				fprintf(stderr, "Error: Can't identify user \"%s\"\n",
 					optarg);
 				return -1;
 			}
 			opts->uid = pwd->pw_uid;
 #else
-			syslog(LOG_ERR, "The --user option is not supported\n");
+			fprintf(stderr, "The --user option is not supported.\n");
 			return -1;
 #endif
 			break;
@@ -622,17 +717,24 @@ static int opts_parse(int argc, char *argv[], struct options *opts)
 #ifdef HAVE_GRP_H
 			struct group *grp = getgrnam(optarg);
 			if (!grp) {
-				syslog(LOG_ERR, "Can't identify group \"%s\"\n",
+				fprintf(stderr, "Can't identify group \"%s\"\n",
 					optarg);
 				return -1;
 			}
 			opts->gid = grp->gr_gid;
 #else
-			syslog(LOG_ERR, "The --group option is not supported\n");
+			fprintf(stderr, "The --group option is not supported.\n");
 			return -1;
 #endif
 			break;
 		}
+		case 'O':
+			if (lub_log_facility(optarg, &(opts->log_facility))) {
+				fprintf(stderr, "Error: Illegal syslog facility %s.\n", optarg);
+				help(-1, argv[0]);
+				exit(-1);
+			}
+			break;
 		case 'h':
 			help(0, argv[0]);
 			exit(0);
@@ -686,5 +788,6 @@ static void help(int status, const char *argv0)
 			" specified user.\n");
 		printf("\t-g <group>, --group=<group>\tExecute process as"
 			" specified group.\n");
+		printf("\t-O, --facility\tSyslog facility. Default is DAEMON.\n");
 	}
 }

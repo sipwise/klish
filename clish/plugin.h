@@ -4,6 +4,10 @@
 #ifndef _clish_plugin_h
 #define _clish_plugin_h
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "lub/types.h"
 
 /* Symbol */
@@ -24,24 +28,20 @@ typedef struct clish_plugin_s clish_plugin_t;
 /* Plugin types */
 
 /* Name of init function within plugin */
-#define CLISH_PLUGIN_INIT_FNAME clish_plugin_init
-#define CLISH_PLUGIN_INIT_NAME "clish_plugin_init"
+#define CLISH_PLUGIN_INIT_FNAME(name) clish_plugin_##name##_init
+#define CLISH_PLUGIN_INIT_NAME_PREFIX "clish_plugin_"
+#define CLISH_PLUGIN_INIT_NAME_SUFFIX "_init"
 #define CLISH_PLUGIN_INIT_FUNC(name) int name(void *clish_shell, clish_plugin_t *plugin)
-#define CLISH_PLUGIN_INIT CLISH_PLUGIN_INIT_FUNC(CLISH_PLUGIN_INIT_FNAME)
+#define CLISH_PLUGIN_INIT(name) CLISH_PLUGIN_INIT_FUNC(CLISH_PLUGIN_INIT_FNAME(name))
 
-/* Name of fini function within plugin */
-#define CLISH_PLUGIN_FINI_FNAME clish_plugin_fini
-#define CLISH_PLUGIN_FINI_NAME "clish_plugin_fini"
-#define CLISH_PLUGIN_FINI_FUNC(name) int name(void *clish_shell, clish_plugin_t *plugin)
-#define CLISH_PLUGIN_FINI CLISH_PLUGIN_FINI_FUNC(CLISH_PLUGIN_FINI_FNAME)
-
+#define CLISH_PLUGIN_FINI(name) int name(void *clish_shell, clish_plugin_t *plugin)
 #define CLISH_PLUGIN_SYM(name) int name(void *clish_context, const char *script, char **out)
-#define CLISH_HOOK_ACCESS(name) int name(void *clish_context, const char *access)
+#define CLISH_HOOK_ACCESS(name) int name(void *clish_shell, const char *access)
 #define CLISH_HOOK_CONFIG(name) int name(void *clish_context)
 #define CLISH_HOOK_LOG(name) int name(void *clish_context, const char *line, int retcode)
 
 typedef CLISH_PLUGIN_INIT_FUNC(clish_plugin_init_t);
-typedef CLISH_PLUGIN_FINI_FUNC(clish_plugin_fini_t);
+typedef CLISH_PLUGIN_FINI(clish_plugin_fini_t);
 typedef CLISH_PLUGIN_SYM(clish_hook_action_fn_t);
 typedef CLISH_HOOK_ACCESS(clish_hook_access_fn_t);
 typedef CLISH_HOOK_CONFIG(clish_hook_config_fn_t);
@@ -49,6 +49,14 @@ typedef CLISH_HOOK_LOG(clish_hook_log_fn_t);
 
 /* Helpers */
 #define SYM_FN(TYPE,SYM) (*((clish_hook_##TYPE##_fn_t *)(clish_sym__get_func(SYM))))
+
+/* Create an array of builtin plugin's init functions */
+struct clish_plugin_builtin_list_s {
+	const char *name; /* Plugin name */
+	clish_plugin_init_t *init; /* Plugin init function */
+};
+typedef struct clish_plugin_builtin_list_s clish_plugin_builtin_list_t;
+extern clish_plugin_builtin_list_t clish_plugin_builtin_list[];
 
 /* Symbol */
 
@@ -69,7 +77,7 @@ int clish_sym_clone(clish_sym_t *dst, clish_sym_t *src);
 
 /* Plugin */
 
-clish_plugin_t *clish_plugin_new(const char *file, const char *alias);
+clish_plugin_t *clish_plugin_new(const char *name);
 void clish_plugin_free(clish_plugin_t *instance, void *userdata);
 int clish_plugin_load(clish_plugin_t *instance, void *userdata);
 clish_sym_t *clish_plugin_get_sym(clish_plugin_t *instance,
@@ -84,13 +92,21 @@ clish_sym_t *clish_plugin_add_hook(clish_plugin_t *instance,
 	void *func, const char *name, int type);
 clish_sym_t *clish_plugin_add_phook(clish_plugin_t *instance,
 	void *func, const char *name, int type);
+void clish_plugin_add_fini(clish_plugin_t *instance,
+	clish_plugin_fini_t *fini);
+clish_plugin_fini_t * clish_plugin_get_fini(clish_plugin_t *instance);
+void clish_plugin_add_init(clish_plugin_t *instance,
+	clish_plugin_init_t *init);
+clish_plugin_init_t * clish_plugin_get_init(clish_plugin_t *instance);
 void clish_plugin_dump(const clish_plugin_t *instance);
-void clish_plugin__set_name(clish_plugin_t *instance, const char *name);
 char *clish_plugin__get_name(const clish_plugin_t *instance);
 void clish_plugin__set_alias(clish_plugin_t *instance, const char *alias);
 char *clish_plugin__get_alias(const clish_plugin_t *instance);
 char *clish_plugin__get_pubname(const clish_plugin_t *instance);
+void clish_plugin__set_file(clish_plugin_t *instance, const char *file);
 char *clish_plugin__get_file(const clish_plugin_t *instance);
+void clish_plugin__set_builtin_flag(clish_plugin_t *instance, bool_t builtin_flag);
+bool_t clish_plugin__get_builtin_flag(const clish_plugin_t *instance);
 void clish_plugin__set_conf(clish_plugin_t *instance, const char *conf);
 char *clish_plugin__get_conf(const clish_plugin_t *instance);
 

@@ -43,10 +43,13 @@ int konf_buf_lseek(konf_buf_t *instance, int newpos);
 int konf_buf__get_fd(const konf_buf_t *instance);
 int konf_buf__get_len(const konf_buf_t *instance);
 char * konf_buf__dup_line(const konf_buf_t *instance);
+void * konf_buf__get_data(const konf_buf_t *instance);
+void konf_buf__set_data(konf_buf_t *instance, void *data);
 
 int konf_buftree_read(lub_bintree_t *instance, int fd);
 char * konf_buftree_parse(lub_bintree_t *instance, int fd);
 void konf_buftree_remove(lub_bintree_t *instance, int fd);
+konf_buf_t *konf_buftree_find(lub_bintree_t *instance, int fd);
 
 #endif				/* _konf_buf_h */
 /** @} clish_conf */

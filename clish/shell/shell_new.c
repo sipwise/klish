@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <syslog.h>
 
 #include "lub/string.h"
 #include "lub/db.h"
@@ -71,30 +72,15 @@ static void clish_shell_init(clish_shell_t * this,
 	this->fifo_name = NULL;
 	this->interactive = BOOL_TRUE; /* The interactive shell by default. */
 	this->log = BOOL_FALSE; /* Disable logging by default */
+	this->log_facility = LOG_LOCAL0; /* LOCAL0 for compatibility */
 	this->dryrun = BOOL_FALSE; /* Disable dry-run by default */
 	this->user = lub_db_getpwuid(getuid()); /* Get user information */
 	this->default_plugin = BOOL_TRUE; /* Load default plugin by default */
 
 	/* Create internal ptypes and params */
-	/* Current depth */
-	tmp_ptype = clish_shell_find_create_ptype(this,
-		"__DEPTH", "Depth", "[0-9]+",
-		CLISH_PTYPE_REGEXP, CLISH_PTYPE_NONE);
-	assert(tmp_ptype);
-	this->param_depth = clish_param_new("_cur_depth",
-		"Current depth", tmp_ptype);
-	clish_param__set_hidden(this->param_depth, BOOL_TRUE);
-	/* Current pwd */
-	tmp_ptype = clish_shell_find_create_ptype(this,
-		"__PWD", "Path", ".+",
-		CLISH_PTYPE_REGEXP, CLISH_PTYPE_NONE);
-	assert(tmp_ptype);
-	this->param_pwd = clish_param_new("_cur_pwd",
-		"Current path", tmp_ptype);
-	clish_param__set_hidden(this->param_pwd, BOOL_TRUE);
 	/* Args */
 	tmp_ptype = clish_shell_find_create_ptype(this,
-		"internal_ARGS",
+		"__ptype_ARGS",
 		"Arguments", "[^\\\\]+",
 		CLISH_PTYPE_REGEXP,
 		CLISH_PTYPE_NONE);
@@ -192,10 +178,6 @@ static void clish_shell_fini(clish_shell_t *this)
 	/* free the pwd vector */
 	free(this->pwdv);
 	konf_client_free(this->client);
-
-	/* Free internal params */
-	clish_param_delete(this->param_depth);
-	clish_param_delete(this->param_pwd);
 
 	lub_string_free(this->lockfile);
 	lub_string_free(this->default_shebang);

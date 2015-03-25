@@ -33,6 +33,8 @@ void lub_ini_free(lub_ini_t *instance);
 lub_pair_t *lub_ini_find_pair(const lub_ini_t *instance, const char *name);
 const char *lub_ini_find(const lub_ini_t *instance, const char *name);
 void lub_ini_add(lub_ini_t *instance, lub_pair_t *pair);
+int lub_ini_parse_str(lub_ini_t *instance, const char *ini);
+int lub_ini_parse_file(lub_ini_t *instance, const char *fn);
 lub_ini_node_t *lub_ini__get_head(lub_ini_t *instance);
 lub_ini_node_t *lub_ini__get_tail(lub_ini_t *instance);
 lub_ini_node_t *lub_ini__get_next(lub_ini_node_t *node);

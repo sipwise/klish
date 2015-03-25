@@ -9,11 +9,8 @@
 
 /*----------------------------------------------------------- */
 /* Initialize internal pseudo-plugin */
-CLISH_PLUGIN_INIT
+CLISH_PLUGIN_INIT(clish)
 {
-	/* Set plugin name */
-	clish_plugin__set_name(plugin, "clish");
-
 	/* Add hooks */
 	clish_plugin_add_phook(plugin, clish_hook_access,
 		"clish_hook_access", CLISH_SYM_TYPE_ACCESS);
@@ -33,6 +30,8 @@ CLISH_PLUGIN_INIT
 	clish_plugin_add_psym(plugin, clish_wdog, "clish_wdog");
 	clish_plugin_add_psym(plugin, clish_macros, "clish_macros");
 	clish_plugin_add_sym(plugin, clish_script, "clish_script");
+
+	clish_shell = clish_shell; /* Happy compiler */
 
 	return 0;
 }

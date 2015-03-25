@@ -28,7 +28,7 @@
 #if defined(HAVE_LIB_EXPAT)
 #include <string.h>
 #include <stdlib.h>
-#include <sys/fcntl.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <errno.h>
@@ -226,7 +226,9 @@ static void clish_expat_chardata_handler(void *data, const char *s, int len)
 	clish_xmldoc_t *doc = data;
 
 	if (doc->current) {
-		char *content = strndup(s, len);
+		char *content = malloc(len + 1);
+		strncpy(content, s, len);
+		content[len] = '\0';
 
 		clish_expat_make_node(doc->current, CLISH_XMLNODE_TEXT, NULL, content, NULL);
 		/*
@@ -266,6 +268,8 @@ static void clish_expat_element_end(void *data, const char *el)
 	if (doc->current) {
 		doc->current = doc->current->parent;
 	}
+
+	el = el; /* Happy compiler */
 }
 
 /** Free a node, its children and its attributes
@@ -310,6 +314,7 @@ clish_xmldoc_t *clish_xmldoc_read(const char *filename)
 	int fd;
 	char *buffer;
 	XML_Parser parser;
+	int rb;
 
 	doc = malloc(sizeof(clish_xmldoc_t));
 	if (!doc)
@@ -330,7 +335,11 @@ clish_xmldoc_t *clish_xmldoc_read(const char *filename)
 		goto error_open;
 	fstat(fd, &sb);
 	buffer = malloc(sb.st_size+1);
-	read(fd, buffer, sb.st_size);
+	rb = read(fd, buffer, sb.st_size);
+	if (rb < 0) {
+		close(fd);
+		goto error_parse;
+	}
 	buffer[sb.st_size] = 0;
 	close(fd);
 
@@ -376,21 +385,29 @@ int clish_xmldoc_is_valid(clish_xmldoc_t *doc)
 
 int clish_xmldoc_error_caps(clish_xmldoc_t *doc)
 {
+	doc = doc; /* Happy compiler */
+
 	return CLISH_XMLERR_NOCAPS;
 }
 
 int clish_xmldoc_get_err_line(clish_xmldoc_t *doc)
 {
+	doc = doc; /* Happy compiler */
+
 	return -1;
 }
 
 int clish_xmldoc_get_err_col(clish_xmldoc_t *doc)
 {
+	doc = doc; /* Happy compiler */
+
 	return -1;
 }
 
 const char *clish_xmldoc_get_err_msg(clish_xmldoc_t *doc)
 {
+	doc = doc; /* Happy compiler */
+
 	return "";
 }
 
@@ -442,7 +459,7 @@ char *clish_xmlnode_fetch_attr(clish_xmlnode_t *node,
 int clish_xmlnode_get_content(clish_xmlnode_t *node, char *content,
 			      unsigned int *contentlen)
 {
-	int minlen = 1;
+	unsigned int minlen = 1;
 
 	if (node && content && contentlen) {
 		clish_xmlnode_t *children = node->children;
@@ -469,14 +486,15 @@ int clish_xmlnode_get_content(clish_xmlnode_t *node, char *content,
 }
 
 int clish_xmlnode_get_name(clish_xmlnode_t *node, char *name,
-			    unsigned int *namelen)
+	unsigned int *namelen)
 {
 	if (node && name && namelen) {
 		if (strlen(node->name) >= *namelen) {
 			*namelen = strlen(node->name) + 1;
 			return -E2BIG;
 		}
-		sprintf(name, "%s", node->name);
+		snprintf(name, *namelen, "%s", node->name);
+		name[*namelen - 1] = '\0';
 		return 0;
 	}
 	return -EINVAL;
@@ -502,6 +520,7 @@ void clish_xmlnode_print(clish_xmlnode_t *node, FILE *out)
 
 void clish_xml_release(void *p)
 {
+	p = p; /* Happy compiler */
 	/* nothing to release */
 }
 

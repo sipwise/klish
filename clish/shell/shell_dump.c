@@ -15,7 +15,7 @@ void clish_shell_dump(clish_shell_t * this)
 	lub_bintree_iterator_t iter;
 
 	lub_dump_printf("shell(%p)\n", this);
-	lub_dump_printf("OVERVIEW:\n%s", this->overview);
+	lub_dump_printf("OVERVIEW:\n%s\n", LUB_DUMP_STR(this->overview));
 	lub_dump_indent();
 
 	v = lub_bintree_findfirst(&this->view_tree);

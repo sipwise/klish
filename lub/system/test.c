@@ -288,6 +288,9 @@ static int binop(void)
 	(void)t_lex(*++t_wp);
 	op = t_wp_op;
 
+	if (!op)
+		return 1;
+
 	if ((opnd2 = *++t_wp) == NULL)
 		syntax(op->op_text, "argument expected");
 

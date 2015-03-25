@@ -56,52 +56,42 @@ static void clish_ptype__set_range(clish_ptype_t * this)
 {
 	char tmp[80];
 
-	/* now set up the range values */
+	/* Now set up the range values */
 	switch (this->method) {
 	/*------------------------------------------------- */
 	case CLISH_PTYPE_REGEXP:
-		/*
-		 * nothing more to do 
-		 */
+		/* Nothing more to do */
 		break;
 	/*------------------------------------------------- */
 	case CLISH_PTYPE_INTEGER:
-		/*
-		 * Setup the integer range
-		 */
-		sprintf(tmp,
-			"%d..%d",
+		/* Setup the integer range */
+		snprintf(tmp, sizeof(tmp), "%d..%d",
 			this->u.integer.min, this->u.integer.max);
+		tmp[sizeof(tmp) - 1] = '\0';
 		this->range = lub_string_dup(tmp);
 		break;
 	/*------------------------------------------------- */
 	case CLISH_PTYPE_UNSIGNEDINTEGER:
-		/*
-		 * Setup the unsigned integer range
-		 */
-		sprintf(tmp,
-			"%u..%u",
+		/* Setup the unsigned integer range */
+		snprintf(tmp, sizeof(tmp), "%u..%u",
 			(unsigned int)this->u.integer.min,
 			(unsigned int)this->u.integer.max);
+		tmp[sizeof(tmp) - 1] = '\0';
 		this->range = lub_string_dup(tmp);
 		break;
 	/*------------------------------------------------- */
 	case CLISH_PTYPE_SELECT:
 	{
-		/*
-		 * Setup the selection values to the help text
-		 */
-		unsigned i;
+		/* Setup the selection values to the help text */
+		unsigned int i;
 
-		for (i = 0;
-			i < lub_argv__get_count(this->u.select.items);
-			i++) {
-			char *p = tmp;
+		for (i = 0; i < lub_argv__get_count(this->u.select.items); i++) {
 			char *name = clish_ptype_select__get_name(this, i);
 
 			if (i > 0)
-				p += sprintf(p, "/");
-			p += sprintf(p, "%s", name);
+				lub_string_cat(&this->range, "/");
+			snprintf(tmp, sizeof(tmp), "%s", name);
+			tmp[sizeof(tmp) - 1] = '\0';
 			lub_string_cat(&this->range, tmp);
 			lub_string_free(name);
 		}
@@ -148,7 +138,7 @@ static const char *method_names[] = {
 /*--------------------------------------------------------- */
 const char *clish_ptype_method__get_name(clish_ptype_method_e method)
 {
-	int max_method = sizeof(method_names) / sizeof(char *);
+	unsigned int max_method = sizeof(method_names) / sizeof(char *);
 
 	if (method >= max_method)
 		return NULL;
@@ -326,7 +316,7 @@ static char *clish_ptype_validate_or_translate(const clish_ptype_t * this,
 		/* first of all check that this is a number */
 		bool_t ok = BOOL_TRUE;
 		const char *p = result;
-		while (*p) {
+		while (p && *p) {
 			if (!lub_ctype_isdigit(*p++)) {
 				ok = BOOL_FALSE;
 				break;

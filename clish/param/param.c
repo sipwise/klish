@@ -16,14 +16,14 @@
  * PRIVATE METHODS
  *--------------------------------------------------------- */
 static void clish_param_init(clish_param_t *this, const char *name,
-	const char *text, clish_ptype_t *ptype)
+	const char *text, const char *ptype_name)
 {
-	/* initialise the help part */
 	this->name = lub_string_dup(name);
 	this->text = lub_string_dup(text);
-	this->ptype = ptype;
+	this->ptype_name = lub_string_dup(ptype_name);
 
-	/* set up defaults */
+	/* Set up defaults */
+	this->ptype = NULL;
 	this->defval = NULL;
 	this->mode = CLISH_PARAM_COMMON;
 	this->optional = BOOL_FALSE;
@@ -32,6 +32,7 @@ static void clish_param_init(clish_param_t *this, const char *name,
 	this->hidden = BOOL_FALSE;
 	this->test = NULL;
 	this->completion = NULL;
+	this->access = NULL;
 
 	this->paramv = clish_paramv_new();
 }
@@ -43,9 +44,11 @@ static void clish_param_fini(clish_param_t * this)
 	lub_string_free(this->defval);
 	lub_string_free(this->name);
 	lub_string_free(this->text);
+	lub_string_free(this->ptype_name);
 	lub_string_free(this->value);
 	lub_string_free(this->test);
 	lub_string_free(this->completion);
+	lub_string_free(this->access);
 
 	clish_paramv_delete(this->paramv);
 }
@@ -54,12 +57,12 @@ static void clish_param_fini(clish_param_t * this)
  * PUBLIC META FUNCTIONS
  *--------------------------------------------------------- */
 clish_param_t *clish_param_new(const char *name, const char *text,
-	clish_ptype_t *ptype)
+	const char *ptype_name)
 {
 	clish_param_t *this = malloc(sizeof(clish_param_t));
 
 	if (this)
-		clish_param_init(this, name, text, ptype);
+		clish_param_init(this, name, text, ptype_name);
 	return this;
 }
 
@@ -81,6 +84,20 @@ void clish_param_insert_param(clish_param_t * this, clish_param_t * param)
 /*---------------------------------------------------------
  * PUBLIC ATTRIBUTES
  *--------------------------------------------------------- */
+void clish_param__set_ptype_name(clish_param_t *this, const char *ptype_name)
+{
+	if (this->ptype_name)
+		lub_string_free(this->ptype_name);
+	this->ptype_name = lub_string_dup(ptype_name);
+}
+
+/*--------------------------------------------------------- */
+const char * clish_param__get_ptype_name(const clish_param_t *this)
+{
+	return this->ptype_name;
+}
+
+/*--------------------------------------------------------- */
 const char *clish_param__get_name(const clish_param_t * this)
 {
 	if (!this)
@@ -104,6 +121,12 @@ const char *clish_param__get_range(const clish_param_t * this)
 clish_ptype_t *clish_param__get_ptype(const clish_param_t * this)
 {
 	return this->ptype;
+}
+
+/*--------------------------------------------------------- */
+void clish_param__set_ptype(clish_param_t *this, clish_ptype_t *ptype)
+{
+	this->ptype = ptype;
 }
 
 /*--------------------------------------------------------- */
@@ -185,6 +208,8 @@ void clish_param_help(const clish_param_t * this, clish_help_t *help)
 void clish_param_help_arrow(const clish_param_t * this, size_t offset)
 {
 	fprintf(stderr, "%*c\n", (int)offset, '^');
+
+	this = this; /* Happy compiler */
 }
 
 /*--------------------------------------------------------- */
@@ -288,8 +313,42 @@ void clish_paramv_insert(clish_paramv_t * this, clish_param_t * param)
 }
 
 /*--------------------------------------------------------- */
+int clish_paramv_remove(clish_paramv_t *this, unsigned int index)
+{
+	size_t new_size;
+	clish_param_t **tmp;
+	clish_param_t **dst, **src;
+	size_t n;
+
+	if (this->paramc < 1)
+		return -1;
+	if (index >= this->paramc)
+		return -1;
+
+	new_size = ((this->paramc - 1) * sizeof(clish_param_t *));
+	dst = this->paramv + index;
+	src = dst + 1;
+	n = this->paramc - index - 1;
+	if (n)
+		memmove(dst, src, n * sizeof(clish_param_t *));
+	/* Resize the parameter vector */
+	if (new_size) {
+		tmp = realloc(this->paramv, new_size);
+		if (!tmp)
+			return -1;
+		this->paramv = tmp;
+	} else {
+		free(this->paramv);
+		this->paramv = NULL;
+	}
+	this->paramc--;
+
+	return 0;
+}
+
+/*--------------------------------------------------------- */
 clish_param_t *clish_paramv__get_param(const clish_paramv_t * this,
-	unsigned index)
+	unsigned int index)
 {
 	clish_param_t *result = NULL;
 
@@ -385,4 +444,18 @@ void clish_param__set_completion(clish_param_t *this, const char *completion)
 char *clish_param__get_completion(const clish_param_t *this)
 {
 	return this->completion;
+}
+
+/*--------------------------------------------------------- */
+void clish_param__set_access(clish_param_t *this, const char *access)
+{
+	if (this->access)
+		lub_string_free(this->access);
+	this->access = lub_string_dup(access);
+}
+
+/*--------------------------------------------------------- */
+char *clish_param__get_access(const clish_param_t *this)
+{
+	return this->access;
 }

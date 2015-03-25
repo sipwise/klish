@@ -15,8 +15,13 @@
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
+
+#if WITH_INTERNAL_GETOPT
+#include "libc/getopt.h"
+#else
 #ifdef HAVE_GETOPT_H
 #include <getopt.h>
+#endif
 #endif
 
 #ifndef VERSION
@@ -33,7 +38,7 @@ int main(int argc, char *argv[])
 	sigset_t sigs;
 
 	static const char *shortopts = "+hv";
-#ifdef HAVE_GETOPT_H
+#ifdef HAVE_GETOPT_LONG
 	static const struct option longopts[] = {
 		{"help",	0, NULL, 'h'},
 		{"version",	0, NULL, 'v'},
@@ -43,7 +48,7 @@ int main(int argc, char *argv[])
 
 	while(1) {
 		int opt;
-#ifdef HAVE_GETOPT_H
+#ifdef HAVE_GETOPT_LONG
 		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 #else
 		opt = getopt(argc, argv, shortopts);

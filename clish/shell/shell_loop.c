@@ -1,5 +1,5 @@
 /*
- * shell_new.c
+ * shell_loop.c
  */
 #include "private.h"
 #include "lub/string.h"
@@ -11,6 +11,8 @@
 #include <unistd.h>
 
 /*-------------------------------------------------------- */
+/* The main CLI loop while interactive execution.
+ */
 int clish_shell_loop(clish_shell_t *this)
 {
 	int running = 0;

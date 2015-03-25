@@ -1,0 +1,8 @@
+menuconfig BR2_PACKAGE_KLISH
+	bool "klish"
+	depends on BR2_PACKAGE_LIBROXML || BR2_PACKAGE_LIBXML2 || BR2_PACKAGE_EXPAT
+	help
+	  The klish is a framework for implementing a CISCO-like CLI on a UNIX systems.
+	  It is configurable by XML files.
+
+	  http://klish.libcode.org

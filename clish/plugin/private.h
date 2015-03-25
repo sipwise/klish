@@ -18,9 +18,10 @@ struct clish_sym_s {
 };
 
 struct clish_plugin_s {
-	char *file; /* Plugin file name. Must be unique. */
-	char *name; /* Plugin name defined by plugin itself. */
+	char *name; /* Plugin name. */
 	char *alias; /* User defined plugin name. Can be used in builtin ref. */
+	char *file; /* Shared object file name. */
+	bool_t builtin_flag; /* If plugin is built into binary */
 	char *conf; /* The content of <PLUGIN>...</PLUGIN> */
 	lub_list_t *syms; /* List of plugin symbols */
 	void *dlhan; /* Handler of dlopen() */

@@ -16,6 +16,7 @@ struct clish_param_s {
 	char *name;
 	char *text;
 	char *value;
+	char *ptype_name;	/* Name of PTYPE */
 	clish_ptype_t *ptype;	/* The type of this parameter */
 	char *defval;		/* default value to use for this parameter */
 	clish_paramv_t *paramv;
@@ -25,4 +26,5 @@ struct clish_param_s {
 	bool_t hidden;
 	char *test; /* The condition to enable param */
 	char *completion; /* Possible completions */
+	char *access;
 };

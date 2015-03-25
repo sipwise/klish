@@ -145,6 +145,9 @@
 *
 * [restore] - restore the depth or view of commands
 *           contained by this view
+*
+* [access] - access rights
+*
 ********************************************************
 -->
 
@@ -318,6 +321,9 @@
 *
 * [test]    - define the condition (see the description of 'test'
 *           utility) to process this parameter.
+*
+* [access]  - access rights
+*
 ********************************************************
     -->
 
@@ -344,6 +350,7 @@
         <xs:attribute name="hidden" type="bool_t" use="optional" default="false"/>
         <xs:attribute name="test" type="xs:string" use="optional"/>
         <xs:attribute name="completion" type="xs:string" use="optional"/>
+        <xs:attribute name="access" type="xs:string" use="optional"/>
     </xs:complexType>
     <!--
 ********************************************************
@@ -433,6 +440,9 @@
 *
 * [inherit]      - a boolean flag to inherit nested
 *                namespace commands recursively
+*
+* [access]       - access rights
+*
 ********************************************************
 -->
 
@@ -523,8 +533,13 @@
 ********************************************************
 -->
     <xs:complexType name="plugin_t">
-        <xs:attribute name="file" type="xs:string" use="required"/>
-        <xs:attribute name="name" type="xs:string" use="optional"/>
+        <xs:simpleContent>
+            <xs:extension base="xs:string">
+                <xs:attribute name="name" type="xs:string" use="required"/>
+                <xs:attribute name="alias" type="xs:string" use="optional"/>
+                <xs:attribute name="file" type="xs:string" use="optional"/>
+            </xs:extension>
+        </xs:simpleContent>
     </xs:complexType>
 
 <!--

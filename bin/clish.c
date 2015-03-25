@@ -14,9 +14,17 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <syslog.h>
+#include <fcntl.h>
+
+#if WITH_INTERNAL_GETOPT
+#include "libc/getopt.h"
+#else
 #ifdef HAVE_GETOPT_H
 #include <getopt.h>
 #endif
+#endif
+
 #include <signal.h>
 #if HAVE_LOCALE_H
 #include <locale.h>
@@ -27,12 +35,14 @@
 
 #include "lub/list.h"
 #include "lub/system.h"
+#include "lub/log.h"
 #include "clish/shell.h"
 
 #define QUOTE(t) #t
 /* #define version(v) printf("%s\n", QUOTE(v)) */
 #define version(v) printf("%s\n", v)
 
+static void sighandler(int signo);
 static void help(int status, const char *argv0);
 
 /*--------------------------------------------------------- */
@@ -51,6 +61,7 @@ int main(int argc, char **argv)
 	bool_t utf8 = BOOL_FALSE;
 	bool_t bit8 = BOOL_FALSE;
 	bool_t log = BOOL_FALSE;
+	int log_facility = LOG_LOCAL0;
 	bool_t dryrun = BOOL_FALSE;
 	bool_t dryrun_config = BOOL_FALSE;
 	const char *xml_path = getenv("CLISH_PATH");
@@ -72,8 +83,8 @@ int main(int argc, char **argv)
 	struct sigaction sigpipe_act;
 	sigset_t sigpipe_set;
 
-	static const char *shortopts = "hvs:ledx:w:i:bqu8okt:c:f:z:";
-#ifdef HAVE_GETOPT_H
+	static const char *shortopts = "hvs:ledx:w:i:bqu8oO:kt:c:f:z:";
+#ifdef HAVE_GETOPT_LONG
 	static const struct option longopts[] = {
 		{"help",	0, NULL, 'h'},
 		{"version",	0, NULL, 'v'},
@@ -89,6 +100,7 @@ int main(int argc, char **argv)
 		{"utf8",	0, NULL, 'u'},
 		{"8bit",	0, NULL, '8'},
 		{"log",		0, NULL, 'o'},
+		{"facility",	1, NULL, 'O'},
 		{"check",	0, NULL, 'k'},
 		{"timeout",	1, NULL, 't'},
 		{"command",	1, NULL, 'c'},
@@ -103,7 +115,7 @@ int main(int argc, char **argv)
 	sigaddset(&sigpipe_set, SIGPIPE);
 	sigpipe_act.sa_flags = 0;
 	sigpipe_act.sa_mask = sigpipe_set;
-	sigpipe_act.sa_handler = SIG_IGN;
+	sigpipe_act.sa_handler = &sighandler;
 	sigaction(SIGPIPE, &sigpipe_act, NULL);
 
 #if HAVE_LOCALE_H
@@ -117,7 +129,7 @@ int main(int argc, char **argv)
 	/* Parse command line options */
 	while(1) {
 		int opt;
-#ifdef HAVE_GETOPT_H
+#ifdef HAVE_GETOPT_LONG
 		opt = getopt_long(argc, argv, shortopts, longopts, NULL);
 #else
 		opt = getopt(argc, argv, shortopts);
@@ -148,6 +160,13 @@ int main(int argc, char **argv)
 			break;
 		case 'o':
 			log = BOOL_TRUE;
+			break;
+		case 'O':
+			if (lub_log_facility(optarg, &log_facility)) {
+				fprintf(stderr, "Error: Illegal syslog facility %s.\n", optarg);
+				help(-1, argv[0]);
+				goto end;
+			}
 			break;
 		case 'd':
 			dryrun = BOOL_TRUE;
@@ -217,8 +236,11 @@ int main(int argc, char **argv)
 	}
 
 	/* Create shell instance */
-	if (quiet)
-		outfd = fopen("/dev/null", "w");
+	if (quiet) {
+		FILE *tmpfd = NULL;
+		if ((tmpfd = fopen("/dev/null", "w")))
+			outfd = tmpfd;
+	}
 	shell = clish_shell_new(NULL, outfd, stop_on_error);
 	if (!shell) {
 		fprintf(stderr, "Error: Can't run clish.\n");
@@ -255,8 +277,10 @@ int main(int argc, char **argv)
 #endif
 	}
 	/* Set logging */
-	if (log)
+	if (log) {
 		clish_shell__set_log(shell, log);
+		clish_shell__set_facility(shell, log_facility);
+	}
 	/* Set dry-run */
 	if (dryrun)
 		clish_shell__set_dryrun(shell, dryrun);
@@ -269,10 +293,8 @@ int main(int argc, char **argv)
 		histfile_expanded = lub_system_tilde_expand(histfile);
 	if (histfile_expanded)
 		clish_shell__restore_history(shell, histfile_expanded);
-	/* Load plugins */
-	if (clish_shell_load_plugins(shell) < 0)
-		goto end;
-	if (clish_shell_link_plugins(shell) < 0)
+	/* Load plugins, link aliases and check access rights */
+	if (clish_shell_prepare(shell) < 0)
 		goto end;
 	/* Dryrun config and log hooks */
 	if (dryrun_config) {
@@ -281,6 +303,9 @@ int main(int argc, char **argv)
 		if ((sym = clish_shell_get_hook(shell, CLISH_SYM_TYPE_LOG)))
 			clish_sym__set_permanent(sym, BOOL_FALSE);
 	}
+#ifdef DEBUG
+	clish_shell_dump(shell);
+#endif
 
 	/* Set source of command stream: files or interactive tty */
 	if(optind < argc) {
@@ -290,8 +315,11 @@ int main(int argc, char **argv)
 			clish_shell_push_file(shell, argv[i], stop_on_error);
 	} else {
 		/* The interactive shell */
-		clish_shell_push_fd(shell, fdopen(dup(fileno(stdin)), "r"),
-			stop_on_error);
+		int tmpfd = dup(fileno(stdin));
+#ifdef FD_CLOEXEC
+		fcntl(tmpfd, F_SETFD, fcntl(tmpfd, F_GETFD) | FD_CLOEXEC);
+#endif
+		clish_shell_push_fd(shell, fdopen(tmpfd, "r"), stop_on_error);
 	}
 
 	/* Execute startup */
@@ -306,7 +334,9 @@ int main(int argc, char **argv)
 		for(iter = lub_list__get_head(cmds);
 			iter; iter = lub_list_node__get_next(iter)) {
 			char *str = (char *)lub_list_node__get_data(iter);
-			clish_shell_forceline(shell, str, NULL);
+			result = clish_shell_forceline(shell, str, NULL);
+			if (stop_on_error && result)
+				break;
 		}
 	} else {
 		/* Main loop */
@@ -322,7 +352,7 @@ end:
 		}
 		clish_shell_delete(shell);
 	}
-	if (quiet)
+	if (quiet && (outfd != stdout))
 		fclose(outfd);
 
 	/* Delete each cmds element */
@@ -374,11 +404,25 @@ static void help(int status, const char *argv0)
 		printf("\t-i <vars>, --viewid=<vars>\tSet the startup viewid variables.\n");
 		printf("\t-u, --utf8\tForce UTF-8 encoding.\n");
 		printf("\t-8, --8bit\tForce 8-bit encoding.\n");
-		printf("\t-o, --log\tEnable command logging to syslog's local0.\n");
+		printf("\t-o, --log\tEnable command logging to syslog's.\n");
+		printf("\t-O, --facility\tSyslog facility. Default is LOCAL0.\n");
 		printf("\t-k, --check\tCheck input files for syntax errors only.\n");
 		printf("\t-t <timeout>, --timeout=<timeout>\tIdle timeout in seconds.\n");
 		printf("\t-c <command>, --command=<command>\tExecute specified command(s).\n\t\tMultiple options are possible.\n");
 		printf("\t-f <path>, --histfile=<path>\tFile to save command history.\n");
 		printf("\t-z <num>, --histsize=<num>\tCommand history size in lines.\n");
 	}
+}
+
+/*--------------------------------------------------------- */
+/*
+ * Signal handler for SIGPIPE.
+ * It's empty but it's needed to don't ignore SIGPIPE because
+ * SIG_IGN will be inherited while ACTION execution.
+ */
+static void sighandler(int signo)
+{
+	signo = signo; /* Happy compiler */
+
+	return;
 }

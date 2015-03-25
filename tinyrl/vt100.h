@@ -109,7 +109,7 @@ extern FILE *tinyrl_vt100__get_istream(const tinyrl_vt100_t * instance);
 extern FILE *tinyrl_vt100__get_ostream(const tinyrl_vt100_t * instance);
 
 extern tinyrl_vt100_escape_t
-tinyrl_vt100_escape_decode(const tinyrl_vt100_t * instance);
+tinyrl_vt100_escape_decode(const tinyrl_vt100_t * instance, const char *esc_seq);
 extern void tinyrl_vt100_ding(const tinyrl_vt100_t * instance);
 extern void tinyrl_vt100_attribute_reset(const tinyrl_vt100_t * instance);
 extern void tinyrl_vt100_attribute_bright(const tinyrl_vt100_t * instance);

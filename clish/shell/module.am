@@ -9,7 +9,7 @@ libclish_la_SOURCES += \
 	clish/shell/shell_new.c \
 	clish/shell/shell_parse.c \
 	clish/shell/shell_file.c \
-	clish/shell/shell_spawn.c \
+	clish/shell/shell_loop.c \
 	clish/shell/shell_startup.c \
 	clish/shell/shell_wdog.c \
 	clish/shell/shell_pwd.c \

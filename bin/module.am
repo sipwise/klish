@@ -10,16 +10,22 @@ bin_clish_LDADD = \
 	libclish.la \
 	libkonf.la \
 	libtinyrl.la \
-	liblub.la
+	liblub.la \
+	$(LIBOBJS) \
+	@CLISH_PLUGIN_BUILTIN_LIBS@
 
 bin_konfd_SOURCES = bin/konfd.c
 bin_konfd_LDADD = \
 	libkonf.la \
-	liblub.la
+	liblub.la \
+	$(LIBOBJS)
 
 bin_konf_SOURCES = bin/konf.c
 bin_konf_LDADD = \
 	libkonf.la \
-	liblub.la
+	liblub.la \
+	$(LIBOBJS)
 
 bin_sigexec_SOURCES = bin/sigexec.c
+bin_sigexec_LDADD = \
+	$(LIBOBJS)

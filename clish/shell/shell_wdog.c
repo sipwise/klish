@@ -1,5 +1,5 @@
 /*
- * shell_startup.c
+ * shell_wdog.c
  */
 #include "private.h"
 #include <assert.h>
@@ -39,6 +39,8 @@ int clish_shell_keypress_fn(tinyrl_t *tinyrl, int key)
 		this->wdog_active = BOOL_FALSE;
 		tinyrl__set_timeout(tinyrl, this->idle_timeout);
 	}
+
+	key = key; /* Happy compiler */
 
 	return 0;
 }

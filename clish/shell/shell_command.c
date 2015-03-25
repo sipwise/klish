@@ -8,8 +8,7 @@
 #include "lub/argv.h"
 
 /*-------------------------------------------------------- */
-void
-clish_shell_iterator_init(clish_shell_iterator_t * iter,
+void clish_shell_iterator_init(clish_shell_iterator_t * iter,
 	clish_nspace_visibility_t field)
 {
 	iter->last_cmd = NULL;
@@ -125,7 +124,7 @@ void clish_shell_param_generator(clish_shell_t *this, lub_argv_t *matches,
 			/* The 'completion' field of PARAM */
 			if (clish_param__get_completion(param)) {
 				char *str, *q;
-				char *saveptr;
+				char *saveptr = NULL;
 				str = clish_shell_expand(
 					clish_param__get_completion(param), SHELL_VAR_ACTION, &context);
 				if (str) {

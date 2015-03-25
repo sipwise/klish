@@ -41,6 +41,7 @@ struct _tinyrl {
 				buffer for redisplay purposes */
 	unsigned int last_point; /* hold record of the previous
 				cursor position for redisplay purposes */
+	unsigned int last_line_size; /* The length of last_buffer */
 	unsigned int last_width; /* Last terminal width. For resize */
 	bool_t utf8;		/* Is the encoding UTF-8 */
 };

@@ -16,20 +16,14 @@ void clish_sym_dump(const clish_sym_t *this)
 	lub_dump_printf("sym(%p)\n", this);
 
 	lub_dump_indent();
-	lub_dump_printf("name      : %s\n", this->name);
-	lub_dump_printf("func      : %p\n", this->func);
+	lub_dump_printf("name      : %s\n", LUB_DUMP_STR(this->name));
+	lub_dump_printf("func      : %p\n", LUB_DUMP_STR(this->func));
 	switch (this->type) {
 	case CLISH_SYM_TYPE_NONE:
 		type = "none";
 		break;
 	case CLISH_SYM_TYPE_ACTION:
 		type = "action";
-		break;
-	case CLISH_SYM_TYPE_INIT:
-		type = "init";
-		break;
-	case CLISH_SYM_TYPE_FINI:
-		type = "fini";
 		break;
 	case CLISH_SYM_TYPE_ACCESS:
 		type = "access";
@@ -45,8 +39,7 @@ void clish_sym_dump(const clish_sym_t *this)
 		break;
 	}
 	lub_dump_printf("type      : %s\n", type);
-	lub_dump_printf("permanent : %s\n",
-		this->permanent ? "true" : "false");
+	lub_dump_printf("permanent : %s\n", LUB_DUMP_BOOL(this->permanent));
 	lub_dump_printf("plugin    : %p\n", this->plugin);
 	lub_dump_undent();
 }
@@ -59,10 +52,9 @@ void clish_plugin_dump(const clish_plugin_t *this)
 
 	lub_dump_printf("plugin(%p)\n", this);
 	lub_dump_indent();
-	lub_dump_printf("name  : %s\n", this->name);
-	lub_dump_printf("alias : %s\n", this->alias);
-	lub_dump_printf("conf  : %s\n", this->conf);
-	lub_dump_printf("file  : %s\n", this->file);
+	lub_dump_printf("name  : %s\n", LUB_DUMP_STR(this->name));
+	lub_dump_printf("alias : %s\n", LUB_DUMP_STR(this->alias));
+	lub_dump_printf("conf  : %s\n", LUB_DUMP_STR(this->conf));
 	lub_dump_printf("dlhan : %p\n", this->dlhan);
 	lub_dump_printf("init  : %p\n", this->init);
 	lub_dump_printf("fini  : %p\n", this->fini);

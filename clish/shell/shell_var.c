@@ -6,6 +6,8 @@
 #include <assert.h>
 #include <string.h>
 #include <ctype.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "lub/string.h"
 #include "private.h"
@@ -18,7 +20,8 @@ void clish_shell__expand_viewid(const char *viewid, lub_bintree_t *tree,
 	clish_context_t *context)
 {
 	char *expanded;
-	char *q, *saveptr;
+	char *q;
+	char *saveptr = NULL;
 
 	expanded = clish_shell_expand(viewid, SHELL_VAR_NONE, context);
 	if (!expanded)
@@ -57,44 +60,62 @@ static char *find_context_var(const char *name, clish_context_t *this)
 			tinyrl__get_width(shell->tinyrl));
 		tmp[sizeof(tmp) - 1] = '\0';
 		result = strdup(tmp);
+
 	} else if (!lub_string_nocasecmp(name, "_height")) {
 		char tmp[5];
 		snprintf(tmp, sizeof(tmp), "%u",
 			tinyrl__get_height(shell->tinyrl));
 		tmp[sizeof(tmp) - 1] = '\0';
 		result = strdup(tmp);
+
 	} else if (!lub_string_nocasecmp(name, "_watchdog_timeout")) {
 		char tmp[5];
 		snprintf(tmp, sizeof(tmp), "%u", shell->wdog_timeout);
 		tmp[sizeof(tmp) - 1] = '\0';
 		result = strdup(tmp);
+
 	} else if (!this->cmd) { /* The vars dependent on command */
 		return NULL;
+
 	} else if (!lub_string_nocasecmp(name, "_full_cmd")) {
 		result = lub_string_dup(clish_command__get_name(this->cmd));
+
 	} else if (!lub_string_nocasecmp(name, "_cmd")) {
 		result = lub_string_dup(clish_command__get_name(
 			clish_command__get_cmd(this->cmd)));
+
 	} else if (!lub_string_nocasecmp(name, "_orig_cmd")) {
 		result = lub_string_dup(clish_command__get_name(
 			clish_command__get_orig(this->cmd)));
+
 	} else if (!lub_string_nocasecmp(name, "_line")) {
 		result = clish_shell__get_line(this);
+
 	} else if (!lub_string_nocasecmp(name, "_full_line")) {
 		result = clish_shell__get_full_line(this);
+
 	} else if (!lub_string_nocasecmp(name, "_params")) {
 		if (this->pargv)
 			result = clish_shell__get_params(this);
+
 	} else if (!lub_string_nocasecmp(name, "_interactive")) {
 		if (clish_shell__get_interactive(this->shell))
 			result = strdup("1");
 		else
 			result = strdup("0");
+
 	} else if (!lub_string_nocasecmp(name, "_isatty")) {
 		if (tinyrl__get_isatty(this->shell->tinyrl))
 			result = strdup("1");
 		else
 			result = strdup("0");
+
+	} else if (!lub_string_nocasecmp(name, "_pid")) {
+		char tmp[10];
+		snprintf(tmp, sizeof(tmp), "%u", getpid());
+		tmp[sizeof(tmp) - 1] = '\0';
+		result = strdup(tmp);
+
 	} else if (lub_string_nocasestr(name, "_prefix") == name) {
 		int idx = 0;
 		int pnum = 0;
@@ -108,6 +129,17 @@ static char *find_context_var(const char *name, clish_context_t *this)
 			result = lub_string_dup(lub_argv__get_arg(argv, idx));
 			lub_argv_delete(argv);
 		}
+
+	} else if (!lub_string_nocasecmp(name, "_cur_depth")) {
+		char tmp[10];
+		int depth = clish_shell__get_depth(shell);
+		snprintf(tmp, sizeof(tmp), "%u", depth);
+		tmp[sizeof(tmp) - 1] = '\0';
+		result = strdup(tmp);
+
+	} else if (!lub_string_nocasecmp(name, "_cur_pwd")) {
+		int depth = clish_shell__get_depth(shell);
+		result = clish_shell__get_pwd_full(shell, depth);
 	}
 
 	return result;
@@ -217,7 +249,7 @@ static char *expand_nextsegment(const char **string, const char *escape_chars,
 		if (p[-1] == '}') {
 			bool_t valid = BOOL_FALSE;
 			char *text, *q;
-			char *saveptr;
+			char *saveptr = NULL;
 
 			/* get the variable text */
 			text = lub_string_dupn(tmp, len);

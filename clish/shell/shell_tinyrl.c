@@ -73,10 +73,10 @@ static bool_t clish_shell_tinyrl_key_help(tinyrl_t *this, int key)
 static clish_pargv_status_t clish_shell_tinyrl_expand(tinyrl_t *this)
 {
 	clish_pargv_status_t status = CLISH_LINE_OK;
+#if 0
 	int rtn;
 	char *buffer;
 
-	return status;
 	/* first of all perform any history substitutions */
 	rtn = tinyrl_history_expand(tinyrl__get_history(this),
 		tinyrl__get_line(this), &buffer);
@@ -104,6 +104,8 @@ static clish_pargv_status_t clish_shell_tinyrl_expand(tinyrl_t *this)
 	}
 	free(buffer);
 
+#endif
+	this = this;
 	return status;
 }
 

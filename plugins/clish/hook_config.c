@@ -46,6 +46,11 @@ static unsigned short str2ushort(const char *str)
 }
 
 /*--------------------------------------------------------- */
+/* Return values:
+ *    0 - success
+ *    !=0 - fail
+ */
+
 CLISH_HOOK_CONFIG(clish_hook_config)
 {
 	clish_shell_t *this = clish_context__get_shell(clish_context);
@@ -62,11 +67,11 @@ CLISH_HOOK_CONFIG(clish_hook_config)
 	const char *escape_chars = lub_string_esc_quoted;
 
 	if (!this)
-		return BOOL_TRUE;
+		return 0;
 
 	client = clish_shell__get_client(this);
 	if (!client)
-		return BOOL_TRUE;
+		return 0;
 
 	config = clish_command__get_config(cmd);
 	op = clish_config__get_op(config);
@@ -74,7 +79,7 @@ CLISH_HOOK_CONFIG(clish_hook_config)
 	switch (op) {
 
 	case CLISH_CONFIG_NONE:
-		return BOOL_TRUE;
+		return 0;
 
 	case CLISH_CONFIG_SET:
 		/* Add set operation */
@@ -122,7 +127,7 @@ CLISH_HOOK_CONFIG(clish_hook_config)
 		break;
 
 	default:
-		return BOOL_FALSE;
+		return -1;
 	};
 
 	/* Add pattern */
@@ -130,7 +135,7 @@ CLISH_HOOK_CONFIG(clish_hook_config)
 		tstr = clish_shell_expand(clish_config__get_pattern(config), SHELL_VAR_REGEX, clish_context);
 		if (!tstr) {
 			lub_string_free(command);
-			return BOOL_FALSE;
+			return -1;
 		}
 		str = lub_string_encode(tstr, escape_chars);
 		lub_string_free(tstr);
@@ -206,7 +211,7 @@ CLISH_HOOK_CONFIG(clish_hook_config)
 		break;
 	};
 
-	return BOOL_TRUE;
+	return 0;
 }
 
 /*--------------------------------------------------------- */
