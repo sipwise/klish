@@ -1,3 +1,15 @@
+klish (2.0.3-1+0~mr4.0.0.0) unstable; urgency=medium
+
+  [ Victor Seva ]
+  * [55939db] Imported Upstream version 2.0.3
+  * [86ed6ae] MT#12319 debian: add watch file
+
+  [ Alexander Lutay ]
+  * [fd4b643] MT#7505 Add .gitreview file for klish
+  * [6b2d99f] MT#7505 ignore .gitreview file
+
+ -- Victor Seva <vseva@sipwise.com>  Wed, 25 Mar 2015 19:33:14 +0100
+
 klish (1.6.6+20130925+git6186ff-1+0~mr4.0.0.0) unstable; urgency=low
 
   [ Michael Prokop ]
