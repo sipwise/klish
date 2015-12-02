@@ -22,7 +22,7 @@ typedef enum {
 	CLISH_RESTORE_NONE,
 	CLISH_RESTORE_DEPTH,
 	CLISH_RESTORE_VIEW
-} clish_view_restore_t;
+} clish_view_restore_e;
 
 #include "lub/list.h"
 #include "clish/command.h"
@@ -52,7 +52,7 @@ clish_command_t *clish_view_find_command(clish_view_t * instance,
 	const char *name, bool_t inherit);
 const clish_command_t *clish_view_find_next_completion(clish_view_t * instance,
 	const char *iter_cmd, const char *line,
-	clish_nspace_visibility_t field, bool_t inherit);
+	clish_nspace_visibility_e field, bool_t inherit);
 clish_command_t *clish_view_resolve_command(clish_view_t * instance,
 	const char *line, bool_t inherit);
 clish_command_t *clish_view_resolve_prefix(clish_view_t * instance,
@@ -70,8 +70,8 @@ char *clish_view__get_prompt(const clish_view_t *instance);
 void clish_view__set_depth(clish_view_t * instance, unsigned depth);
 unsigned clish_view__get_depth(const clish_view_t * instance);
 void clish_view__set_restore(clish_view_t * instance,
-	clish_view_restore_t restore);
-clish_view_restore_t clish_view__get_restore(const clish_view_t * instance);
+	clish_view_restore_e restore);
+clish_view_restore_e clish_view__get_restore(const clish_view_t * instance);
 int clish_view_insert_hotkey(const clish_view_t *instance, const char *key, const char *cmd);
 const char *clish_view_find_hotkey(const clish_view_t *instance, int code);
 void clish_view__set_access(clish_view_t *instance, const char *access);

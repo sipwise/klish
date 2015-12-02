@@ -389,7 +389,7 @@ static char * process_query(konf_buf_t *tbuf, konf_tree_t * conf, char *str)
 	konf_tree_t *tmpconf;
 	konf_query_t *query;
 	char *retval = NULL;
-	konf_query_op_t ret = KONF_QUERY_OP_ERROR;
+	konf_query_op_e ret = KONF_QUERY_OP_ERROR;
 
 #ifdef DEBUG
 	fprintf(stderr, "REQUEST: %s\n", str);

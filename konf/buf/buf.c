@@ -240,6 +240,12 @@ char * konf_buf__dup_line(const konf_buf_t *this)
 }
 
 /*--------------------------------------------------------- */
+char * konf_buf__get_buf(const konf_buf_t *this)
+{
+	return this->buf;
+}
+
+/*--------------------------------------------------------- */
 void * konf_buf__get_data(const konf_buf_t *this)
 {
 	return this->data;

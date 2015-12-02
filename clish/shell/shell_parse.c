@@ -10,11 +10,11 @@
 #include "private.h"
 
 /*----------------------------------------------------------- */
-clish_pargv_status_t clish_shell_parse(
+clish_pargv_status_e clish_shell_parse(
 	clish_shell_t *this, const char *line,
 	const clish_command_t **ret_cmd, clish_pargv_t **pargv)
 {
-	clish_pargv_status_t result = CLISH_BAD_CMD;
+	clish_pargv_status_e result = CLISH_BAD_CMD;
 	clish_context_t context;
 	const clish_command_t *cmd;
 	lub_argv_t *argv = NULL;
@@ -67,7 +67,7 @@ static bool_t line_test(const clish_param_t *param, void *context)
 }
 
 /*--------------------------------------------------------- */
-clish_pargv_status_t clish_shell_parse_pargv(clish_pargv_t *pargv,
+clish_pargv_status_e clish_shell_parse_pargv(clish_pargv_t *pargv,
 	const clish_command_t *cmd,
 	void *context,
 	clish_paramv_t *paramv,
@@ -79,7 +79,7 @@ clish_pargv_status_t clish_shell_parse_pargv(clish_pargv_t *pargv,
 	unsigned nopt_index = 0;
 	clish_param_t *nopt_param = NULL;
 	unsigned i;
-	clish_pargv_status_t retval;
+	clish_pargv_status_e retval;
 	unsigned paramc = clish_paramv__get_count(paramv);
 	int up_level = 0; /* Is it a first level of param nesting? */
 
@@ -317,14 +317,14 @@ clish_pargv_status_t clish_shell_parse_pargv(clish_pargv_t *pargv,
 }
 
 /*----------------------------------------------------------- */
-clish_shell_state_t clish_shell__get_state(const clish_shell_t *this)
+clish_shell_state_e clish_shell__get_state(const clish_shell_t *this)
 {
 	return this->state;
 }
 
 /*----------------------------------------------------------- */
 void clish_shell__set_state(clish_shell_t *this,
-	clish_shell_state_t state)
+	clish_shell_state_e state)
 {
 	assert(this);
 	this->state = state;

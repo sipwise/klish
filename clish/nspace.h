@@ -22,7 +22,7 @@ typedef enum {
 	CLISH_NSPACE_HELP,
 	CLISH_NSPACE_COMPLETION,
 	CLISH_NSPACE_CHELP
-} clish_nspace_visibility_t;
+} clish_nspace_visibility_e;
 
 #include <regex.h>
 
@@ -41,7 +41,7 @@ clish_nspace_t *clish_nspace_new(const char *view_name);
 void clish_nspace_delete(clish_nspace_t * instance);
 const clish_command_t *clish_nspace_find_next_completion(clish_nspace_t *
 	instance, const char *iter_cmd, const char *line,
-	clish_nspace_visibility_t field);
+	clish_nspace_visibility_e field);
 clish_command_t *clish_nspace_find_command(clish_nspace_t * instance, const char *name);
 void clish_nspace_dump(const clish_nspace_t * instance);
 clish_command_t * clish_nspace_create_prefix_cmd(clish_nspace_t * instance,
@@ -61,7 +61,7 @@ bool_t clish_nspace__get_completion(const clish_nspace_t * instance);
 bool_t clish_nspace__get_context_help(const clish_nspace_t * instance);
 bool_t clish_nspace__get_inherit(const clish_nspace_t * instance);
 bool_t clish_nspace__get_visibility(const clish_nspace_t * instance,
-	clish_nspace_visibility_t field);
+	clish_nspace_visibility_e field);
 void clish_nspace__set_prefix(clish_nspace_t * instance, const char *prefix);
 void clish_nspace__set_help(clish_nspace_t * instance, bool_t help);
 void clish_nspace__set_completion(clish_nspace_t * instance, bool_t help);

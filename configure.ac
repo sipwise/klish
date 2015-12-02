@@ -1,8 +1,8 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 m4_define([MAJOR_VERSION], 2)
-m4_define([MINOR_VERSION], 0)
-m4_define([MICRO_VERSION], 3)
+m4_define([MINOR_VERSION], 1)
+m4_define([MICRO_VERSION], 1)
 
 AC_PREREQ(2.59)
 AC_INIT([klish],
@@ -474,6 +474,42 @@ fi
 if test $count_xml_backends -eq 0; then
     AC_MSG_NOTICE([I found a suitable XML backend: $found_xml_backend])
 fi
+
+# LIBXSLT
+AC_ARG_WITH(libxslt,
+            [AS_HELP_STRING([--with-libxslt=DIR],
+                            [Use libxslt as the XSLT transform engine [default=no]. Depend on libxml2 library.])],
+            [use_libxslt=$withval],
+            [use_libxslt=no])
+
+if test "x$use_libxslt" != "xno" -a "$found_xml_backend" != "libxml2"; then
+    AC_MSG_ERROR([The libxml2 is necessary for libxslt])
+fi
+
+################################
+# Check for the libxslt transform engine
+################################
+
+if test x$use_libxslt != xno; then
+	AC_CHECK_LIB([xslt], [xsltApplyStylesheet], [libxslt_lib_found=yes], [libxslt_lib_found=no])
+	if test "x$libxslt_lib_found" != "xyes"; then
+		AC_MSG_ERROR([Can't find an XSLT library])
+	fi
+	XSLT_CFLAGS="`pkg-config libxslt --cflags 2>/dev/null`"
+	XSLT_LDFLAGS="`pkg-config libxslt --libs-only-L 2>/dev/null`"
+	XSLT_LIBS="`pkg-config libxslt --libs-only-l 2>/dev/null`"
+	if test "x${XSLT_LIBS}" = "x"; then
+		XSLT_LIBS="-lxslt"
+	fi
+	XML_CFLAGS="${XML_CFLAGS} ${XSLT_CFLAGS}"
+	XML_LDFLAGS="${XML_LDFLAGS} ${XSLT_LDFLAGS}"
+	XML_LIBS="${XML_LIBS} ${XSLT_LIBS}"
+        AC_DEFINE([HAVE_LIB_LIBXSLT], [], [libxslt XML transform engine])
+fi
+
+################################
+# Common XML related subst
+################################
 
 AC_SUBST(XML_LIBS)
 AC_SUBST(XML_LDFLAGS)

@@ -22,7 +22,7 @@
  */
 typedef struct {
 	const char *last_cmd;
-	clish_nspace_visibility_t field;
+	clish_nspace_visibility_e field;
 } clish_shell_iterator_t;
 
 /* this is used to maintain a stack of file handles */
@@ -68,7 +68,7 @@ struct clish_shell_s {
 	unsigned int wdog_timeout; /* Watchdog timeout */
 	bool_t wdog_active; /* If watchdog is active now */
 
-	clish_shell_state_t state; /* The current state */
+	clish_shell_state_e state; /* The current state */
 	char *overview; /* Overview text for this shell */
 	tinyrl_t *tinyrl; /* Tiny readline instance */
 	clish_shell_file_t *current_file; /* file currently in use for input */
@@ -101,7 +101,7 @@ struct clish_shell_s {
  */
 void
 clish_shell_iterator_init(clish_shell_iterator_t * iter,
-	clish_nspace_visibility_t field);
+	clish_nspace_visibility_e field);
 
 /**
  * get the next command which is an extension of the specified line 
@@ -121,9 +121,9 @@ int clish_shell_pop_file(clish_shell_t * instance);
 
 clish_view_t *clish_shell_find_view(clish_shell_t * instance, const char *name);
 void clish_shell_insert_view(clish_shell_t * instance, clish_view_t * view);
-clish_pargv_status_t clish_shell_parse(clish_shell_t * instance,
+clish_pargv_status_e clish_shell_parse(clish_shell_t * instance,
 	const char *line, const clish_command_t ** cmd, clish_pargv_t ** pargv);
-clish_pargv_status_t clish_shell_parse_pargv(clish_pargv_t *pargv,
+clish_pargv_status_e clish_shell_parse_pargv(clish_pargv_t *pargv,
 	const clish_command_t *cmd,
 	void *context,
 	clish_paramv_t *paramv,

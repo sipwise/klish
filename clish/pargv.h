@@ -19,7 +19,7 @@ typedef enum {
 	CLISH_BAD_CMD,
 	CLISH_BAD_PARAM,
 	CLISH_BAD_HISTORY
-} clish_pargv_status_t;
+} clish_pargv_status_e;
 
 typedef struct clish_pargv_s clish_pargv_t;
 typedef struct clish_parg_s clish_parg_t;

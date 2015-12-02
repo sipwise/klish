@@ -213,7 +213,7 @@ clish_command_t *clish_nspace_find_command(clish_nspace_t * this, const char *na
 /*--------------------------------------------------------- */
 const clish_command_t *clish_nspace_find_next_completion(clish_nspace_t * this,
 	const char *iter_cmd, const char *line,
-	clish_nspace_visibility_t field)
+	clish_nspace_visibility_e field)
 {
 	const clish_command_t *cmd = NULL, *retval = NULL;
 	clish_view_t *view = clish_nspace__get_view(this);
@@ -383,7 +383,7 @@ bool_t clish_nspace__get_inherit(const clish_nspace_t * this)
 
 /*--------------------------------------------------------- */
 bool_t clish_nspace__get_visibility(const clish_nspace_t * instance,
-	clish_nspace_visibility_t field)
+	clish_nspace_visibility_e field)
 {
 	bool_t result = BOOL_FALSE;
 

@@ -112,11 +112,11 @@ unsigned clish_pargv__get_count(clish_pargv_t * this)
 }
 
 /*--------------------------------------------------------- */
-clish_parg_t *clish_pargv__get_parg(clish_pargv_t * this, unsigned index)
+clish_parg_t *clish_pargv__get_parg(clish_pargv_t * this, unsigned int index)
 {
 	if (!this)
 		return NULL;
-	if (index > this->pargc)
+	if (index >= this->pargc)
 		return NULL;
 	return this->pargv[index];
 }

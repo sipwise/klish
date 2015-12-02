@@ -259,7 +259,7 @@ int konf_query__get_pwdc(konf_query_t *this)
 }
 
 /*-------------------------------------------------------- */
-konf_query_op_t konf_query__get_op(konf_query_t *this)
+konf_query_op_e konf_query__get_op(konf_query_t *this)
 {
 	return this->op;
 }

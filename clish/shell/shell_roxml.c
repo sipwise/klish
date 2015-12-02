@@ -50,6 +50,17 @@ static inline clish_xmlnode_t *node_to_xmlnode(node_t *node)
 /*
  * public interface
  */
+
+int clish_xmldoc_start(void)
+{
+	return 0;
+}
+
+int clish_xmldoc_stop(void)
+{
+	return 0;
+}
+
 clish_xmldoc_t *clish_xmldoc_read(const char *filename)
 {
 	node_t *doc = roxml_load_doc((char*)filename);

@@ -63,13 +63,13 @@ void clish_config_delete(clish_config_t *this)
 /*---------------------------------------------------------
  * PUBLIC ATTRIBUTES
  *--------------------------------------------------------- */
-void clish_config__set_op(clish_config_t *this, clish_config_op_t op)
+void clish_config__set_op(clish_config_t *this, clish_config_op_e op)
 {
 	this->op = op;
 }
 
 /*--------------------------------------------------------- */
-clish_config_op_t clish_config__get_op(const clish_config_t *this)
+clish_config_op_e clish_config__get_op(const clish_config_t *this)
 {
 	return this->op;
 }

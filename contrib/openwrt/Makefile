@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2012 OpenWrt.org
+# Copyright (C) 2014-2015 Emmanuel Deloget
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -8,12 +8,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=klish
-PKG_VERSION:=1.5.4
+PKG_VERSION:=2.0.4
 PKG_RELEASE:=1
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
-PKG_SOURCE_URL:=http://klish.googlecode.com/files
-PKG_MD5SUM:=c98a1c65f7538c3f4687c6f8039295df
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
+PKG_SOURCE_URL:=http://libcode.org/attachments/download/55/
+PKG_MD5SUM:=f71d9948705da50094d7b7129fe39275
 
 PKG_INSTALL:=1
 
@@ -28,7 +28,7 @@ endef
 
 define Package/klish
 $(call Package/klish/default,main tool)
-  DEPENDS:=+libstdcpp
+  DEPENDS:=+libroxml
 endef
 
 define Package/konf
@@ -56,20 +56,23 @@ define Package/konf/description
  More information about these tools is to be found on the klish web site.
 endef
 
+CONFIGURE_ARGS += \
+	--with-libroxml
+
 define Package/klish/install
-    $(INSTALL_DIR) $(1)/usr/bin
-    $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/clish $(1)/usr/bin/
-    $(INSTALL_DIR) $(1)/usr/lib
-    $(CP) $(PKG_INSTALL_DIR)/usr/lib/*.so* $(1)/usr/lib/
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/clish $(1)/usr/bin/
+	$(INSTALL_DIR) $(1)/usr/lib
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/*.so* $(1)/usr/lib/
 endef
 
 define Package/konf/install
-    $(INSTALL_DIR) $(1)/usr/bin
-    $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/konf $(1)/usr/bin/
-    $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/konfd $(1)/usr/bin/
-    $(INSTALL_DIR) $(1)/usr/lib
-    $(CP) $(PKG_INSTALL_DIR)/usr/lib/libkonf.so* $(1)/usr/lib/
-    $(CP) $(PKG_INSTALL_DIR)/usr/lib/liblub.so* $(1)/usr/lib/
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/konf $(1)/usr/bin/
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/konfd $(1)/usr/bin/
+	$(INSTALL_DIR) $(1)/usr/lib
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libkonf.so* $(1)/usr/lib/
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/liblub.so* $(1)/usr/lib/
 endef
 
 $(eval $(call BuildPackage,klish))
@@ -89,8 +92,8 @@ define Package/klish-xml-files/description
 endef
 
 define Package/klish-xml-files/install
-    $(INSTALL_DIR) $(1)/etc/clish
-    $(CP) $(PKG_BUILD_DIR)/xml-examples/clish $(1)/etc/clish/
+	$(INSTALL_DIR) $(1)/etc/clish
+	$(CP) $(PKG_BUILD_DIR)/xml-examples/clish $(1)/etc/clish/
 endef
 
 $(eval $(call BuildPackage,klish-xml-files))

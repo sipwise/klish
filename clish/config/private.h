@@ -8,7 +8,7 @@
  * PRIVATE TYPES
  *--------------------------------------------------------- */
 struct clish_config_s {
-	clish_config_op_t op; /* CONFIG operation */
+	clish_config_op_e op; /* CONFIG operation */
 	unsigned short priority;
 	char *pattern;
 	char *file;

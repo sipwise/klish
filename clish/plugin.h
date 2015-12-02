@@ -12,15 +12,21 @@
 
 /* Symbol */
 
-/* Symbol types. Functions with different definition. */
+/* Symbol types. Functions with different purposes. */
 typedef enum {
 	CLISH_SYM_TYPE_NONE = 0, /* None */
-	CLISH_SYM_TYPE_ACTION, /* Common builtin symbol */
-	CLISH_SYM_TYPE_ACCESS,
-	CLISH_SYM_TYPE_CONFIG,
-	CLISH_SYM_TYPE_LOG,
+	CLISH_SYM_TYPE_ACTION, /* Common builtin symbol for ACTION tag */
+	CLISH_SYM_TYPE_ACCESS, /* Callback for "access" field */
+	CLISH_SYM_TYPE_CONFIG, /* Callback for CONFIG tag */
+	CLISH_SYM_TYPE_LOG, /* Callback for logging */
 	CLISH_SYM_TYPE_MAX /* Number of elements */
 } clish_sym_type_e;
+
+/* External functions APIs. */
+typedef enum {
+	CLISH_SYM_API_SIMPLE = 0, /* Simple (may be single) API */
+	CLISH_SYM_API_STDOUT /* Symbol for ACTION tag without "out" argument */
+} clish_sym_api_e;
 
 typedef struct clish_sym_s clish_sym_t;
 typedef struct clish_plugin_s clish_plugin_t;
@@ -36,6 +42,7 @@ typedef struct clish_plugin_s clish_plugin_t;
 
 #define CLISH_PLUGIN_FINI(name) int name(void *clish_shell, clish_plugin_t *plugin)
 #define CLISH_PLUGIN_SYM(name) int name(void *clish_context, const char *script, char **out)
+#define CLISH_PLUGIN_OSYM(name) int name(void *clish_context, const char *script)
 #define CLISH_HOOK_ACCESS(name) int name(void *clish_shell, const char *access)
 #define CLISH_HOOK_CONFIG(name) int name(void *clish_context)
 #define CLISH_HOOK_LOG(name) int name(void *clish_context, const char *line, int retcode)
@@ -43,6 +50,7 @@ typedef struct clish_plugin_s clish_plugin_t;
 typedef CLISH_PLUGIN_INIT_FUNC(clish_plugin_init_t);
 typedef CLISH_PLUGIN_FINI(clish_plugin_fini_t);
 typedef CLISH_PLUGIN_SYM(clish_hook_action_fn_t);
+typedef CLISH_PLUGIN_OSYM(clish_hook_oaction_fn_t);
 typedef CLISH_HOOK_ACCESS(clish_hook_access_fn_t);
 typedef CLISH_HOOK_CONFIG(clish_hook_config_fn_t);
 typedef CLISH_HOOK_LOG(clish_hook_log_fn_t);
@@ -72,7 +80,9 @@ bool_t clish_sym__get_permanent(clish_sym_t *instance);
 void clish_sym__set_plugin(clish_sym_t *instance, clish_plugin_t *plugin);
 clish_plugin_t *clish_sym__get_plugin(clish_sym_t *instance);
 void clish_sym__set_type(clish_sym_t *instance, int type);
-int clish_sym__get_type(clish_sym_t *instance);
+int clish_sym__get_type(const clish_sym_t *instance);
+void clish_sym__set_api(clish_sym_t *instance, clish_sym_api_e api);
+clish_sym_api_e clish_sym__get_api(const clish_sym_t *instance);
 int clish_sym_clone(clish_sym_t *dst, clish_sym_t *src);
 
 /* Plugin */
@@ -88,6 +98,10 @@ clish_sym_t *clish_plugin_add_sym(clish_plugin_t *instance,
 	clish_hook_action_fn_t *func, const char *name);
 clish_sym_t *clish_plugin_add_psym(clish_plugin_t *instance,
 	clish_hook_action_fn_t *func, const char *name);
+clish_sym_t *clish_plugin_add_osym(clish_plugin_t *instance,
+	clish_hook_oaction_fn_t *func, const char *name);
+clish_sym_t *clish_plugin_add_posym(clish_plugin_t *instance,
+	clish_hook_oaction_fn_t *func, const char *name);
 clish_sym_t *clish_plugin_add_hook(clish_plugin_t *instance,
 	void *func, const char *name, int type);
 clish_sym_t *clish_plugin_add_phook(clish_plugin_t *instance,
@@ -109,6 +123,8 @@ void clish_plugin__set_builtin_flag(clish_plugin_t *instance, bool_t builtin_fla
 bool_t clish_plugin__get_builtin_flag(const clish_plugin_t *instance);
 void clish_plugin__set_conf(clish_plugin_t *instance, const char *conf);
 char *clish_plugin__get_conf(const clish_plugin_t *instance);
+void clish_plugin__set_rtld_global(clish_plugin_t *instance, bool_t rtld_global);
+bool_t clish_plugin__get_rtld_global(const clish_plugin_t *instance);
 
 #endif				/* _clish_plugin_h */
 /** @} clish_plugin */

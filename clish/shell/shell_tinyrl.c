@@ -70,9 +70,9 @@ static bool_t clish_shell_tinyrl_key_help(tinyrl_t *this, int key)
 /*
  * Expand the current line with any history substitutions
  */
-static clish_pargv_status_t clish_shell_tinyrl_expand(tinyrl_t *this)
+static clish_pargv_status_e clish_shell_tinyrl_expand(tinyrl_t *this)
 {
-	clish_pargv_status_t status = CLISH_LINE_OK;
+	clish_pargv_status_e status = CLISH_LINE_OK;
 #if 0
 	int rtn;
 	char *buffer;
@@ -153,7 +153,7 @@ static bool_t clish_shell_tinyrl_key_space(tinyrl_t *this, int key)
 	clish_context_t *context = tinyrl__get_context(this);
 	clish_shell_t *shell = clish_context__get_shell(context);
 	const char *line = tinyrl__get_line(this);
-	clish_pargv_status_t arg_status;
+	clish_pargv_status_e arg_status;
 	const clish_command_t *cmd = NULL;
 	clish_pargv_t *pargv = NULL;
 
@@ -270,7 +270,7 @@ static bool_t clish_shell_tinyrl_key_enter(tinyrl_t *this, int key)
 		}
 	}
 	if (cmd) {
-		clish_pargv_status_t arg_status;
+		clish_pargv_status_e arg_status;
 		tinyrl_multi_crlf(this);
 		/* we've got a command so check the syntax */
 		arg_status = clish_shell_parse(shell,

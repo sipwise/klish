@@ -21,7 +21,7 @@
 #include <fcntl.h>
 
 /*--------------------------------------------------------- */
-CLISH_PLUGIN_SYM(clish_script)
+CLISH_PLUGIN_OSYM(clish_script)
 {
 	clish_shell_t *this = clish_context__get_shell(clish_context);
 	const clish_action_t *action = clish_context__get_action(clish_context);
@@ -29,14 +29,8 @@ CLISH_PLUGIN_SYM(clish_script)
 	pid_t cpid = -1;
 	int res;
 	const char *fifo_name;
-	FILE *rpipe, *wpipe;
+	FILE *wpipe;
 	char *command = NULL;
-
-	/* Signal vars */
-	struct sigaction sig_old_int;
-	struct sigaction sig_old_quit;
-	struct sigaction sig_new;
-	sigset_t sig_set;
 
 	assert(this);
 	if (!script) /* Nothing to do */
@@ -75,7 +69,7 @@ CLISH_PLUGIN_SYM(clish_script)
 		wpipe = fopen(fifo_name, "w");
 		if (!wpipe)
 			_exit(-1);
-		fwrite(script, strlen(script) + 1, 1, wpipe);
+		fwrite(script, strlen(script), 1, wpipe);
 		fclose(wpipe);
 		_exit(0);
 	}
@@ -86,53 +80,12 @@ CLISH_PLUGIN_SYM(clish_script)
 	lub_string_cat(&command, " ");
 	lub_string_cat(&command, fifo_name);
 
-	/* If the stdout of script is needed */
-	if (out) {
-		konf_buf_t *buf;
+	res = system(command);
 
-		/* Ignore SIGINT and SIGQUIT */
-		sigemptyset(&sig_set);
-		sig_new.sa_flags = 0;
-		sig_new.sa_mask = sig_set;
-		sig_new.sa_handler = SIG_IGN;
-		sigaction(SIGINT, &sig_new, &sig_old_int);
-		sigaction(SIGQUIT, &sig_new, &sig_old_quit);
+	/* Wait for the writing process */
+	kill(cpid, SIGTERM);
+	waitpid(cpid, NULL, 0);
 
-		/* Execute shebang with FIFO as argument */
-		rpipe = popen(command, "r");
-		if (!rpipe) {
-			fprintf(stderr, "Error: Can't fork the script.\n"
-				"Error: The ACTION will be not executed.\n");
-			lub_string_free(command);
-			kill(cpid, SIGTERM);
-			waitpid(cpid, NULL, 0);
-
-			/* Restore SIGINT and SIGQUIT */
-			sigaction(SIGINT, &sig_old_int, NULL);
-			sigaction(SIGQUIT, &sig_old_quit, NULL);
-
-			return -1;
-		}
-		/* Read the result of script execution */
-		buf = konf_buf_new(fileno(rpipe));
-		while (konf_buf_read(buf) > 0);
-		*out = konf_buf__dup_line(buf);
-		konf_buf_delete(buf);
-		/* Wait for the writing process */
-		kill(cpid, SIGTERM);
-		waitpid(cpid, NULL, 0);
-		/* Wait for script */
-		res = pclose(rpipe);
-
-		/* Restore SIGINT and SIGQUIT */
-		sigaction(SIGINT, &sig_old_int, NULL);
-		sigaction(SIGQUIT, &sig_old_quit, NULL);
-	} else {
-		res = system(command);
-		/* Wait for the writing process */
-		kill(cpid, SIGTERM);
-		waitpid(cpid, NULL, 0);
-	}
 	lub_string_free(command);
 
 #ifdef DEBUG
@@ -140,5 +93,3 @@ CLISH_PLUGIN_SYM(clish_script)
 #endif /* DEBUG */
 	return WEXITSTATUS(res);
 }
-
-/*--------------------------------------------------------- */

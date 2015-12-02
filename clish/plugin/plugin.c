@@ -40,6 +40,7 @@ clish_sym_t *clish_sym_new(const char *name, void *func, int type)
 	this->name = lub_string_dup(name);
 	this->func = func;
 	this->type = type;
+	this->api = CLISH_SYM_API_SIMPLE;
 	this->permanent = BOOL_FALSE;
 
 	return this;
@@ -110,9 +111,21 @@ void clish_sym__set_type(clish_sym_t *this, int type)
 }
 
 /*--------------------------------------------------------- */
-int clish_sym__get_type(clish_sym_t *this)
+int clish_sym__get_type(const clish_sym_t *this)
 {
 	return this->type;
+}
+
+/*--------------------------------------------------------- */
+void clish_sym__set_api(clish_sym_t *this, clish_sym_api_e api)
+{
+	this->api = api;
+}
+
+/*--------------------------------------------------------- */
+clish_sym_api_e clish_sym__get_api(const clish_sym_t *this)
+{
+	return this->api;
 }
 
 /*--------------------------------------------------------- */
@@ -151,6 +164,8 @@ clish_plugin_t *clish_plugin_new(const char *name)
 	/* Constructor and destructor */
 	this->init = NULL;
 	this->fini = NULL;
+	/* Flags */
+	this->rtld_global = BOOL_FALSE; /* The dlopen() use RTLD_LOCAL by default */
 
 	return this;
 }
@@ -224,6 +239,35 @@ clish_sym_t *clish_plugin_add_psym(clish_plugin_t *this,
 }
 
 /*--------------------------------------------------------- */
+clish_sym_t *clish_plugin_add_osym(clish_plugin_t *this,
+	clish_hook_oaction_fn_t *func, const char *name)
+{
+	clish_sym_t *s;
+
+	if (!(s = clish_plugin_add_generic(this, func,
+		name, CLISH_SYM_TYPE_ACTION, BOOL_FALSE)))
+		return s;
+	clish_sym__set_api(s, CLISH_SYM_API_STDOUT);
+
+	return s;
+}
+
+/*--------------------------------------------------------- */
+/* Add permanent symbol (can't be turned off by dry-run) */
+clish_sym_t *clish_plugin_add_posym(clish_plugin_t *this,
+	clish_hook_oaction_fn_t *func, const char *name)
+{
+	clish_sym_t *s;
+
+	if (!(s = clish_plugin_add_generic(this, func,
+		name, CLISH_SYM_TYPE_ACTION, BOOL_TRUE)))
+		return s;
+	clish_sym__set_api(s, CLISH_SYM_API_STDOUT);
+
+	return s;
+}
+
+/*--------------------------------------------------------- */
 clish_sym_t *clish_plugin_add_hook(clish_plugin_t *this,
 	void *func, const char *name, int type)
 {
@@ -292,6 +336,7 @@ static int clish_plugin_load_shared(clish_plugin_t *this)
 #ifdef HAVE_DLFCN_H
 	char *file = NULL; /* Plugin so file name */
 	char *init_name = NULL; /* Init function name */
+	int flag = RTLD_NOW;
 
 	if (this->file) {
 		file = lub_string_dup(this->file);
@@ -302,7 +347,11 @@ static int clish_plugin_load_shared(clish_plugin_t *this)
 	}
 
 	/* Open dynamic library */
-	this->dlhan = dlopen(file, RTLD_NOW | RTLD_LOCAL);
+	if (clish_plugin__get_rtld_global(this))
+		flag |= RTLD_GLOBAL;
+	else
+		flag |= RTLD_LOCAL;
+	this->dlhan = dlopen(file, flag);
 	lub_string_free(file);
 	if (!this->dlhan) {
 		fprintf(stderr, "Error: Can't open plugin \"%s\": %s\n",
@@ -419,6 +468,18 @@ void clish_plugin__set_conf(clish_plugin_t *this, const char *conf)
 char *clish_plugin__get_conf(const clish_plugin_t *this)
 {
 	return this->conf;
+}
+
+/*--------------------------------------------------------- */
+void clish_plugin__set_rtld_global(clish_plugin_t *this, bool_t rtld_global)
+{
+	this->rtld_global = rtld_global;
+}
+
+/*--------------------------------------------------------- */
+bool_t clish_plugin__get_rtld_global(const clish_plugin_t *this)
+{
+	return this->rtld_global;
 }
 
 /*--------------------------------------------------------- */

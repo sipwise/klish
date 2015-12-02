@@ -18,5 +18,5 @@ struct clish_view_s {
 	lub_list_t *nspaces;
 	clish_hotkeyv_t *hotkeys;
 	unsigned int depth;
-	clish_view_restore_t restore;
+	clish_view_restore_e restore;
 };

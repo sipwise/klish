@@ -5,7 +5,7 @@
 #include "lub/types.h"
 
 struct konf_query_s {
-	konf_query_op_t op;
+	konf_query_op_e op;
 	char *pattern;
 	unsigned short priority;
 	bool_t seq; /* sequence aka auto priority */
