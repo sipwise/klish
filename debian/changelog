@@ -1,3 +1,10 @@
+klish (2.1.1-1+0~mr4.2.0.0) unstable; urgency=medium
+
+  * [3279ab2] MT#15935 add gbp.conf
+  * [1e026b9] Imported Upstream version 2.1.1
+
+ -- Victor Seva <vseva@sipwise.com>  Wed, 02 Dec 2015 14:54:29 +0100
+
 klish (2.0.3-1+0~mr4.2.0.0) unstable; urgency=medium
 
   * New release.
