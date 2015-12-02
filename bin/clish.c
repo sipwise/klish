@@ -67,6 +67,7 @@ int main(int argc, char **argv)
 	const char *xml_path = getenv("CLISH_PATH");
 	const char *view = getenv("CLISH_VIEW");
 	const char *viewid = getenv("CLISH_VIEWID");
+	const char *xslt_file = NULL;
 
 	FILE *outfd = stdout;
 	bool_t istimeout = BOOL_FALSE;
@@ -83,7 +84,7 @@ int main(int argc, char **argv)
 	struct sigaction sigpipe_act;
 	sigset_t sigpipe_set;
 
-	static const char *shortopts = "hvs:ledx:w:i:bqu8oO:kt:c:f:z:";
+	static const char *shortopts = "hvs:ledx:w:i:bqu8oO:kt:c:f:z:p:";
 #ifdef HAVE_GETOPT_LONG
 	static const struct option longopts[] = {
 		{"help",	0, NULL, 'h'},
@@ -106,6 +107,7 @@ int main(int argc, char **argv)
 		{"command",	1, NULL, 'c'},
 		{"histfile",	1, NULL, 'f'},
 		{"histsize",	1, NULL, 'z'},
+		{"xslt",	1, NULL, 'p'},
 		{NULL,		0, NULL, 0}
 	};
 #endif
@@ -214,6 +216,14 @@ int main(int argc, char **argv)
 				histsize = itmp;
 			}
 			break;
+		case 'p':
+#ifdef HAVE_LIB_LIBXSLT
+			xslt_file = optarg;
+#else
+			fprintf(stderr, "Error: The klish was built without XSLT support.\n");
+			goto end;
+#endif
+			break;
 		case 'h':
 			help(0, argv[0]);
 			exit(0);
@@ -247,7 +257,8 @@ int main(int argc, char **argv)
 		goto end;
 	}
 	/* Load the XML files */
-	if (clish_shell_load_scheme(shell, xml_path))
+	clish_xmldoc_start();
+	if (clish_shell_load_scheme(shell, xml_path, xslt_file))
 		goto end;
 	/* Set communication to the konfd */
 	clish_shell__set_socket(shell, socket_path);
@@ -363,6 +374,9 @@ end:
 	}
 	lub_list_free(cmds);
 
+	/* Stop XML engine */
+	clish_xmldoc_stop();
+
 	return result;
 }
 
@@ -400,6 +414,9 @@ static void help(int status, const char *argv0)
 		printf("\t-q, --quiet\tDisable echo while executing commands\n\t\tfrom the file stream.\n");
 		printf("\t-d, --dry-run\tDon't actually execute ACTION scripts.\n");
 		printf("\t-x <path>, --xml-path=<path>\tPath to XML scheme files.\n");
+#ifdef HAVE_LIB_LIBXSLT
+		printf("\t-p <path>, --xslt=<path>\tProcess XML with specified XSLT stylesheet.\n");
+#endif
 		printf("\t-w <view_name>, --view=<view_name>\tSet the startup view.\n");
 		printf("\t-i <vars>, --viewid=<vars>\tSet the startup viewid variables.\n");
 		printf("\t-u, --utf8\tForce UTF-8 encoding.\n");

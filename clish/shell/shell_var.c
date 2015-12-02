@@ -173,7 +173,7 @@ static char *find_var(const char *name, lub_bintree_t *tree, clish_context_t *co
 	if (!res) {
 		char *out = NULL;
 		clish_context__set_action(context, clish_var__get_action(var));
-		if (clish_shell_exec_action(context, &out)) {
+		if (clish_shell_exec_action(context, &out, BOOL_FALSE)) {
 			lub_string_free(out);
 			return NULL;
 		}
@@ -378,7 +378,7 @@ static char *expand_nextsegment(const char **string, const char *escape_chars,
  * subtituting each occurance of a "${FRED}" type variable sub-string
  * with the appropriate value.
  */
-char *clish_shell_expand(const char *str, clish_shell_var_t vtype, clish_context_t *context)
+char *clish_shell_expand(const char *str, clish_shell_var_e vtype, clish_context_t *context)
 {
 	char *seg, *result = NULL;
 	const char *escape_chars = NULL;
@@ -480,6 +480,12 @@ char *clish_shell__get_full_line(clish_context_t *context)
 /*--------------------------------------------------------- */
 char *clish_shell_expand_var(const char *name, clish_context_t *context)
 {
+	return clish_shell_expand_var_ex(name, context, SHELL_EXPAND_ALL);
+}
+
+/*----------------------------------------------------------- */
+char *clish_shell_expand_var_ex(const char *name, clish_context_t *context, clish_shell_expand_e flags)
+{
 	clish_shell_t *this;
 	const clish_command_t *cmd;
 	clish_pargv_t *pargv;
@@ -494,26 +500,31 @@ char *clish_shell_expand_var(const char *name, clish_context_t *context)
 	pargv = clish_context__get_pargv(context);
 
 	/* try and substitute a parameter value */
-	if (pargv) {
+	if (pargv && (flags & SHELL_EXPAND_PARAM)) {
 		const clish_parg_t *parg = clish_pargv_find_arg(pargv, name);
 		if (parg)
 			tmp = clish_parg__get_value(parg);
 	}
+
 	/* try and substitute the param's default */
-	if (!tmp && cmd)
+	if (!tmp && cmd && (flags & SHELL_EXPAND_PARAM))
 		tmp = clish_paramv_find_default(
 			clish_command__get_paramv(cmd), name);
+
 	/* try and substitute a viewId variable */
-	if (!tmp && this)
+	if (!tmp && this && (flags & SHELL_EXPAND_VIEW))
 		tmp = string = find_viewid_var(name, context);
+
 	/* try and substitute context fixed variable */
-	if (!tmp)
+	if (!tmp && (flags & SHELL_EXPAND_CONTEXT))
 		tmp = string = find_context_var(name, context);
+
 	/* try and substitute a global var value */
-	if (!tmp && this)
+	if (!tmp && this && (flags & SHELL_EXPAND_VAR))
 		tmp = string = find_global_var(name, context);
+
 	/* get the contents of an environment variable */
-	if (!tmp)
+	if (!tmp && (flags & SHELL_EXPAND_ENV))
 		tmp = getenv(name);
 
 	if (string)

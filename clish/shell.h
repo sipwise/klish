@@ -29,6 +29,9 @@
 #define CLISH_LOCK_PATH "/tmp/clish.lock"
 #define CLISH_LOCK_WAIT 20
 
+#define CLISH_STDOUT_CHUNK 1024
+#define CLISH_STDOUT_MAXBUF (CLISH_STDOUT_CHUNK * 1024)
+
 #define CLISH_XML_ERROR_STR "Error parsing XML: "
 #define CLISH_XML_ERROR_ATTR(attr) CLISH_XML_ERROR_STR"The \""attr"\" attribute is required.\n"
 
@@ -61,13 +64,22 @@ typedef enum {
 	SHELL_STATE_HELPING = 7,
 	SHELL_STATE_EOF = 8, /* EOF of input stream */
 	SHELL_STATE_CLOSING = 9
-} clish_shell_state_t;
+} clish_shell_state_e;
 
 typedef enum {
 	SHELL_VAR_NONE, /* Nothing to escape */
 	SHELL_VAR_ACTION, /* Variable expanding for ACTION script */
 	SHELL_VAR_REGEX /* Variable expanding for regex usage */
-} clish_shell_var_t;
+} clish_shell_var_e;
+
+typedef enum {
+	SHELL_EXPAND_PARAM = 1,
+	SHELL_EXPAND_VIEW = 2,
+	SHELL_EXPAND_CONTEXT = 4,
+	SHELL_EXPAND_VAR = 8,
+	SHELL_EXPAND_ENV = 16,
+	SHELL_EXPAND_ALL = 255
+} clish_shell_expand_e;
 
 _BEGIN_C_DECL
 
@@ -96,9 +108,8 @@ clish_ptype_t *clish_shell_find_create_ptype(clish_shell_t * instance,
 	clish_ptype_preprocess_e preprocess);
 clish_ptype_t *clish_shell_find_ptype(clish_shell_t *instance,
 	const char *name);
-int clish_shell_xml_read(clish_shell_t * instance, const char *filename);
 void clish_shell_help(clish_shell_t * instance, const char *line);
-int clish_shell_exec_action(clish_context_t *context, char **out);
+int clish_shell_exec_action(clish_context_t *context, char **out, bool_t intr);
 int clish_shell_execute(clish_context_t *context, char **out);
 int clish_shell_forceline(clish_shell_t *instance, const char *line, char ** out);
 int clish_shell_readline(clish_shell_t *instance, char ** out);
@@ -119,7 +130,8 @@ int clish_shell_push_fd(clish_shell_t * instance, FILE * file,
 void clish_shell_insert_var(clish_shell_t *instance, clish_var_t *var);
 clish_var_t *clish_shell_find_var(clish_shell_t *instance, const char *name);
 char *clish_shell_expand_var(const char *name, clish_context_t *context);
-char *clish_shell_expand(const char *str, clish_shell_var_t vtype, clish_context_t *context);
+char *clish_shell_expand_var_ex(const char *name, clish_context_t *context, clish_shell_expand_e flags);
+char *clish_shell_expand(const char *str, clish_shell_var_e vtype, clish_context_t *context);
 
 /*-----------------
  * attributes
@@ -144,11 +156,11 @@ FILE *clish_shell__get_ostream(const clish_shell_t * instance);
 void clish_shell__set_lockfile(clish_shell_t * instance, const char * path);
 char * clish_shell__get_lockfile(clish_shell_t * instance);
 int clish_shell__set_socket(clish_shell_t * instance, const char * path);
-int clish_shell_load_scheme(clish_shell_t * instance, const char * xml_path);
+int clish_shell_load_scheme(clish_shell_t * instance, const char * xml_path, const char *xslt_path);
 int clish_shell_loop(clish_shell_t * instance);
-clish_shell_state_t clish_shell__get_state(const clish_shell_t * instance);
+clish_shell_state_e clish_shell__get_state(const clish_shell_t * instance);
 void clish_shell__set_state(clish_shell_t * instance,
-	clish_shell_state_t state);
+	clish_shell_state_e state);
 void clish_shell__set_startup_view(clish_shell_t * instance, const char * viewname);
 void clish_shell__set_startup_viewid(clish_shell_t * instance, const char * viewid);
 void clish_shell__set_default_shebang(clish_shell_t * instance, const char * shebang);
@@ -210,6 +222,13 @@ int clish_shell__set_udata(clish_shell_t *instance,
 
 /* Access functions */
 int clish_shell_prepare(clish_shell_t *instance);
+
+/*
+ * Non shell specific functions.
+ * Start and Stop XML parser engine.
+ */
+int clish_xmldoc_start(void);
+int clish_xmldoc_stop(void);
 
 _END_C_DECL
 

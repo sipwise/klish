@@ -14,7 +14,7 @@
 
 typedef struct {
 	const char* sequence;
-	tinyrl_vt100_escape_t code;
+	tinyrl_vt100_escape_e code;
 } vt100_decode_t;
 
 /* This table maps the vt100 escape codes to an enumeration */
@@ -34,10 +34,10 @@ static vt100_decode_t cmds[] = {
 };
 
 /*--------------------------------------------------------- */
-tinyrl_vt100_escape_t tinyrl_vt100_escape_decode(const tinyrl_vt100_t *this,
+tinyrl_vt100_escape_e tinyrl_vt100_escape_decode(const tinyrl_vt100_t *this,
 	const char *esc_seq)
 {
-	tinyrl_vt100_escape_t result = tinyrl_vt100_UNKNOWN;
+	tinyrl_vt100_escape_e result = tinyrl_vt100_UNKNOWN;
 	unsigned int i;
 
 	/* Decode the sequence to macros */

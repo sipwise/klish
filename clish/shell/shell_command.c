@@ -9,7 +9,7 @@
 
 /*-------------------------------------------------------- */
 void clish_shell_iterator_init(clish_shell_iterator_t * iter,
-	clish_nspace_visibility_t field)
+	clish_nspace_visibility_e field)
 {
 	iter->last_cmd = NULL;
 	iter->field = field;

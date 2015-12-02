@@ -14,7 +14,7 @@ typedef enum {
 	CLISH_CONFIG_SET,
 	CLISH_CONFIG_UNSET,
 	CLISH_CONFIG_DUMP
-} clish_config_op_t;
+} clish_config_op_e;
 
 /*=====================================
  * COMMAND INTERFACE
@@ -32,8 +32,8 @@ void clish_config_dump(const clish_config_t *instance);
 /*-----------------
  * attributes
  *----------------- */
-void clish_config__set_op(clish_config_t *instance, clish_config_op_t op);
-clish_config_op_t clish_config__get_op(const clish_config_t *instance);
+void clish_config__set_op(clish_config_t *instance, clish_config_op_e op);
+clish_config_op_e clish_config__get_op(const clish_config_t *instance);
 void clish_config__set_priority(clish_config_t *instance, unsigned short priority);
 unsigned short clish_config__get_priority(const clish_config_t *instance);
 void clish_config__set_pattern(clish_config_t *instance, const char *pattern);

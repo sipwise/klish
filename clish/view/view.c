@@ -285,7 +285,7 @@ static const clish_command_t *find_next_completion(clish_view_t * this,
 /*--------------------------------------------------------- */
 const clish_command_t *clish_view_find_next_completion(clish_view_t * this,
 	const char *iter_cmd, const char *line,
-	clish_nspace_visibility_t field, bool_t inherit)
+	clish_nspace_visibility_e field, bool_t inherit)
 {
 	const clish_command_t *result, *cmd;
 	clish_nspace_t *nspace;
@@ -379,13 +379,13 @@ unsigned clish_view__get_depth(const clish_view_t * this)
 
 /*--------------------------------------------------------- */
 void clish_view__set_restore(clish_view_t * this,
-	clish_view_restore_t restore)
+	clish_view_restore_e restore)
 {
 	this->restore = restore;
 }
 
 /*--------------------------------------------------------- */
-clish_view_restore_t clish_view__get_restore(const clish_view_t * this)
+clish_view_restore_e clish_view__get_restore(const clish_view_t * this)
 {
 	return this->restore;
 }

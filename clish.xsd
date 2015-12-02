@@ -530,6 +530,9 @@
 *******************************************************
 * <PLUGIN> is used to dynamically load plugins
 *
+* [rtld_global] - A boolean RTLD_GLOBAL flag for dlopen()
+*                 while plugin loading. Default is "false".
+*
 ********************************************************
 -->
     <xs:complexType name="plugin_t">
@@ -538,6 +541,7 @@
                 <xs:attribute name="name" type="xs:string" use="required"/>
                 <xs:attribute name="alias" type="xs:string" use="optional"/>
                 <xs:attribute name="file" type="xs:string" use="optional"/>
+                <xs:attribute name="rtld_global" type="bool_t" use="optional" default="false"/>
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>

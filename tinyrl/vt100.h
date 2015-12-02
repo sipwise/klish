@@ -78,7 +78,7 @@ typedef enum {
 	tinyrl_vt100_DELETE, /**< Delete character on the right */
 	tinyrl_vt100_PGUP, /**< No action at the moment */
 	tinyrl_vt100_PGDOWN /**< No action at the moment */
-} tinyrl_vt100_escape_t;
+} tinyrl_vt100_escape_e;
 
 /* Return values from vt100_getchar() */
 #define VT100_EOF	-1
@@ -108,7 +108,7 @@ tinyrl_vt100__set_istream(tinyrl_vt100_t * instance, FILE * istream);
 extern FILE *tinyrl_vt100__get_istream(const tinyrl_vt100_t * instance);
 extern FILE *tinyrl_vt100__get_ostream(const tinyrl_vt100_t * instance);
 
-extern tinyrl_vt100_escape_t
+extern tinyrl_vt100_escape_e
 tinyrl_vt100_escape_decode(const tinyrl_vt100_t * instance, const char *esc_seq);
 extern void tinyrl_vt100_ding(const tinyrl_vt100_t * instance);
 extern void tinyrl_vt100_attribute_reset(const tinyrl_vt100_t * instance);

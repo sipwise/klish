@@ -72,28 +72,45 @@ static clish_xml_cb_t xml_elements[] = {
  */
 const char *default_path = "/etc/clish;~/.clish";
 
+static int process_node(clish_shell_t *shell, clish_xmlnode_t *node,
+	void *parent);
+
 /*-------------------------------------------------------- */
-int clish_shell_load_scheme(clish_shell_t *this, const char *xml_path)
+int clish_shell_load_scheme(clish_shell_t *this, const char *xml_path, const char *xslt_path)
 {
 	const char *path = xml_path;
 	char *buffer;
 	char *dirname;
 	char *saveptr = NULL;
-	int res = 0;
+	int res = -1;
+	clish_xmldoc_t *doc = NULL;
+	DIR *dir;
 
-	/* use the default path */
+#ifdef HAVE_LIB_LIBXSLT
+	clish_xslt_t *xslt = NULL;
+
+	/* Load global XSLT stylesheet */
+	if (xslt_path) {
+		xslt = clish_xslt_read(xslt_path);
+		if (!clish_xslt_is_valid(xslt)) {
+			fprintf(stderr, CLISH_XML_ERROR_STR"Can't load XSLT file %s\n",
+				xslt_path);
+			return -1;
+		}
+	}
+#endif
+
+	/* Use the default path */
 	if (!path)
 		path = default_path;
-	/* take a copy of the path */
 	buffer = lub_system_tilde_expand(path);
 
-	/* now loop though each directory */
+	/* Loop though each directory */
 	for (dirname = strtok_r(buffer, ";", &saveptr);
 		dirname; dirname = strtok_r(NULL, ";", &saveptr)) {
-		DIR *dir;
 		struct dirent *entry;
 
-		/* search this directory for any XML files */
+		/* Search this directory for any XML files */
 		dir = opendir(dirname);
 		if (NULL == dir) {
 #ifdef DEBUG
@@ -105,37 +122,91 @@ int clish_shell_load_scheme(clish_shell_t *this, const char *xml_path)
 		}
 		for (entry = readdir(dir); entry; entry = readdir(dir)) {
 			const char *extension = strrchr(entry->d_name, '.');
-			/* check the filename */
-			if ((NULL != extension) &&
-				(0 == strcmp(".xml", extension))) {
-				char *filename = NULL;
+			char *filename = NULL;
+			clish_xmlnode_t *root;
+			int r;
 
-				/* build the filename */
-				lub_string_cat(&filename, dirname);
-				lub_string_cat(&filename, "/");
-				lub_string_cat(&filename, entry->d_name);
+			/* Check the filename */
+			if (!extension || strcmp(".xml", extension))
+				continue;
+
+			/* Build the filename */
+			lub_string_cat(&filename, dirname);
+			lub_string_cat(&filename, "/");
+			lub_string_cat(&filename, entry->d_name);
 
 #ifdef DEBUG
-				fprintf(stderr, "Parse XML-file: %s\n", filename);
+			fprintf(stderr, "Parse XML-file: %s\n", filename);
 #endif
-				/* load this file */
-				res = clish_shell_xml_read(this, filename);
-				/* Error message */
-				if (res)
-					fprintf(stderr, CLISH_XML_ERROR_STR"File %s\n",
-						filename);
-				/* release the resource */
-				lub_string_free(filename);
+			/* Load current XML file */
+			doc = clish_xmldoc_read(filename);
+			if (!clish_xmldoc_is_valid(doc)) {
+				int errcaps = clish_xmldoc_error_caps(doc);
+				printf("Unable to open file '%s'", filename);
+				if ((errcaps & CLISH_XMLERR_LINE) == CLISH_XMLERR_LINE)
+					printf(", at line %d", clish_xmldoc_get_err_line(doc));
+				if ((errcaps & CLISH_XMLERR_COL) == CLISH_XMLERR_COL)
+					printf(", at column %d", clish_xmldoc_get_err_col(doc));
+				if ((errcaps & CLISH_XMLERR_DESC) == CLISH_XMLERR_DESC)
+					printf(", message is %s", clish_xmldoc_get_err_msg(doc));
+				printf("\n");
+				goto error;
 			}
-			if (res)
-				break;
+#ifdef HAVE_LIB_LIBXSLT
+			/* Use embedded stylesheet if stylesheet
+			 * filename is not specified.
+			 */
+			if (!xslt_path)
+				xslt = clish_xslt_read_embedded(doc);
+
+			if (clish_xslt_is_valid(xslt)) {
+				clish_xmldoc_t *tmp = NULL;
+				tmp = clish_xslt_apply(doc, xslt);
+				if (!clish_xmldoc_is_valid(tmp)) {
+					fprintf(stderr, CLISH_XML_ERROR_STR"Can't load XSLT file %s\n", xslt_path);
+					goto error;
+				}
+				clish_xmldoc_release(doc);
+				doc = tmp;
+			}
+
+			if (!xslt_path && clish_xslt_is_valid(xslt))
+				clish_xslt_release(xslt);
+#endif
+			root = clish_xmldoc_get_root(doc);
+			r = process_node(this, root, NULL);
+			clish_xmldoc_release(doc);
+
+			/* Error message */
+			if (r) {
+				fprintf(stderr, CLISH_XML_ERROR_STR"File %s\n",
+					filename);
+				lub_string_free(filename);
+				goto error;
+			}
+			lub_string_free(filename);
 		}
-		/* all done for this directory */
 		closedir(dir);
-		if (res)
-			break;
 	}
+
+/* To don't free memory twice on cleanup */
+#ifdef HAVE_LIB_LIBXSLT
+	if (!xslt_path)
+		xslt = NULL;
+#endif
+	doc = NULL;
+	dir = NULL;
+	res = 0; /* Success */
+error:
 	lub_string_free(buffer);
+	if (dir)
+		closedir(dir);
+	if (clish_xmldoc_is_valid(doc))
+		clish_xmldoc_release(doc);
+#ifdef HAVE_LIB_LIBXSLT
+	if (clish_xslt_is_valid(xslt))
+		clish_xslt_release(xslt);
+#endif
 
 	return res;
 }
@@ -222,34 +293,6 @@ static int process_children(clish_shell_t *shell,
 	}
 
 	return 0;
-}
-
-/* ------------------------------------------------------ */
-int clish_shell_xml_read(clish_shell_t *shell, const char *filename)
-{
-	int ret = -1;
-	clish_xmldoc_t *doc;
-
-	doc = clish_xmldoc_read(filename);
-
-	if (clish_xmldoc_is_valid(doc)) {
-		clish_xmlnode_t *root = clish_xmldoc_get_root(doc);
-		ret = process_node(shell, root, NULL);
-	} else {
-		int errcaps = clish_xmldoc_error_caps(doc);
-		printf("Unable to open file '%s'", filename);
-		if ((errcaps & CLISH_XMLERR_LINE) == CLISH_XMLERR_LINE)
-			printf(", at line %d", clish_xmldoc_get_err_line(doc));
-		if ((errcaps & CLISH_XMLERR_COL) == CLISH_XMLERR_COL)
-			printf(", at column %d", clish_xmldoc_get_err_col(doc));
-		if ((errcaps & CLISH_XMLERR_DESC) == CLISH_XMLERR_DESC)
-			printf(", message is %s", clish_xmldoc_get_err_msg(doc));
-		printf("\n");
-	}
-
-	clish_xmldoc_release(doc);
-
-	return ret;
 }
 
 /* ------------------------------------------------------ */
@@ -1130,6 +1173,7 @@ static int process_plugin(clish_shell_t *shell, clish_xmlnode_t *element,
 	char *file = clish_xmlnode_fetch_attr(element, "file");
 	char *name = clish_xmlnode_fetch_attr(element, "name");
 	char *alias = clish_xmlnode_fetch_attr(element, "alias");
+	char *rtld_global = clish_xmlnode_fetch_attr(element, "rtld_global");
 	int res = -1;
 	char *text;
 
@@ -1154,6 +1198,9 @@ static int process_plugin(clish_shell_t *shell, clish_xmlnode_t *element,
 	if (file && *file)
 		clish_plugin__set_file(plugin, file);
 
+	if (rtld_global && lub_string_nocasecmp(rtld_global, "true") == 0)
+		clish_plugin__set_rtld_global(plugin, BOOL_TRUE);
+
 	/* Get PLUGIN body content */
 	text = clish_xmlnode_get_all_content(element);
 	if (text && *text)
@@ -1166,6 +1213,7 @@ error:
 	clish_xml_release(file);
 	clish_xml_release(name);
 	clish_xml_release(alias);
+	clish_xml_release(rtld_global);
 
 	parent = parent; /* Happy compiler */
 

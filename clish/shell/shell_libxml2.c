@@ -19,6 +19,19 @@
 #include <libxml/tree.h>
 #include "xmlapi.h"
 
+#ifdef HAVE_LIB_LIBXSLT
+#include <libxslt/xslt.h>
+#include <libxslt/xsltInternals.h>
+#include <libxslt/transform.h>
+#include <libxslt/xsltutils.h>
+extern int xmlLoadExtDtdDefaultValue;
+
+/* dummy stuff ; really a xsltStylesheet */
+struct clish_xslt_s {
+	int dummy;
+};
+#endif
+
 /* dummy stuff ; really a xmlDoc */
 struct clish_xmldoc_s {
 	int dummy;
@@ -52,18 +65,40 @@ static inline clish_xmlnode_t *node_to_xmlnode(xmlNode *node)
 /*
  * public interface
  */
+
+int clish_xmldoc_start(void)
+{
+#ifdef HAVE_LIB_LIBXSLT
+	/* The XSLT example contain these settings but I doubt 
+	 * it's really necessary.
+	 */
+/*	xmlSubstituteEntitiesDefault(1);
+	xmlLoadExtDtdDefaultValue = 1;
+*/
+#endif
+	return 0;
+}
+
+int clish_xmldoc_stop(void)
+{
+#ifdef HAVE_LIB_LIBXSLT
+	xsltCleanupGlobals();
+#endif
+	xmlCleanupParser();
+	return 0;
+}
+
 clish_xmldoc_t *clish_xmldoc_read(const char *filename)
 {
-	xmlDoc *doc = xmlReadFile(filename, NULL, 0);
+	xmlDoc *doc;
+	doc = xmlReadFile(filename, NULL, 0);
 	return doc_to_xmldoc(doc);
 }
 
 void clish_xmldoc_release(clish_xmldoc_t *doc)
 {
-	if (doc) {
+	if (doc)
 		xmlFreeDoc(xmldoc_to_doc(doc));
-		xmlCleanupParser();
-	}
 }
 
 int clish_xmldoc_is_valid(clish_xmldoc_t *doc)
@@ -199,7 +234,8 @@ int clish_xmlnode_get_content(clish_xmlnode_t *node, char *content,
 	/* first, get the content length */
 	c = n->children;
 	while (c) {
-		if (c->type == XML_TEXT_NODE && !xmlIsBlankNode(c)) {
+		if ((c->type == XML_TEXT_NODE || c->type == XML_CDATA_SECTION_NODE)
+			&& !xmlIsBlankNode(c)) {
 			rlen += strlen((char*)c->content);
 		}
 		c = c->next;
@@ -209,7 +245,8 @@ int clish_xmlnode_get_content(clish_xmlnode_t *node, char *content,
 	if (rlen <= *contentlen) {
 		c = n->children;
 		while (c) {
-			if (c->type == XML_TEXT_NODE && !xmlIsBlankNode(c)) {
+			if ((c->type == XML_TEXT_NODE || c->type == XML_CDATA_SECTION_NODE)
+				 && !xmlIsBlankNode(c)) {
 				strcat(content, (char*)c->content);
 			}
 			c = c->next;
@@ -274,6 +311,66 @@ void clish_xml_release(void *p)
 {
 	/* do we allocate memory? not yet. */
 }
+
+#ifdef HAVE_LIB_LIBXSLT
+
+static inline xsltStylesheet *xslt_to_xsltStylesheet(clish_xslt_t *xslt)
+{
+	return (xsltStylesheet*)xslt;
+}
+
+static inline clish_xslt_t *xsltStylesheet_to_xslt(xsltStylesheet *xslt)
+{
+	return (clish_xslt_t*)xslt;
+}
+
+int clish_xslt_is_valid(clish_xslt_t *stylesheet)
+{
+	return stylesheet != NULL;
+}
+
+clish_xmldoc_t *clish_xslt_apply(clish_xmldoc_t *xmldoc, clish_xslt_t *stylesheet)
+{
+	xmlDoc *doc = xmldoc_to_doc(xmldoc);
+	xsltStylesheetPtr cur = xslt_to_xsltStylesheet(stylesheet);
+	xmlDoc *res;
+
+	if (!doc || !cur)
+		return doc_to_xmldoc(NULL);
+	res = xsltApplyStylesheet(cur, doc, NULL);
+
+	return doc_to_xmldoc(res);
+}
+
+clish_xslt_t *clish_xslt_read(const char *filename)
+{
+	xsltStylesheet* cur = NULL;
+
+	cur = xsltParseStylesheetFile((const xmlChar *)filename);
+
+	return xsltStylesheet_to_xslt(cur);
+}
+
+clish_xslt_t *clish_xslt_read_embedded(clish_xmldoc_t *xmldoc)
+{
+	xsltStylesheet* cur = NULL;
+	xmlDoc *doc = xmldoc_to_doc(xmldoc);
+
+	cur = xsltLoadStylesheetPI(doc);
+
+	return xsltStylesheet_to_xslt(cur);
+}
+
+void clish_xslt_release(clish_xslt_t *stylesheet)
+{
+	xsltStylesheet* cur = xslt_to_xsltStylesheet(stylesheet);
+
+	if (!cur)
+		return;
+	xsltFreeStylesheet(cur);
+}
+
+#endif /* HAVE_LIB_LIBXSLT */
 
 #endif /* HAVE_LIB_LIBXML2 */
 

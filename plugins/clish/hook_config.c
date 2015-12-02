@@ -62,7 +62,7 @@ CLISH_HOOK_CONFIG(clish_hook_config)
 	char *str = NULL;
 	char *tstr;
 	char tmp[PATH_MAX + 100];
-	clish_config_op_t op;
+	clish_config_op_e op;
 	unsigned int num;
 	const char *escape_chars = lub_string_esc_quoted;
 

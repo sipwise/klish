@@ -19,5 +19,5 @@ CLISH_PLUGIN_SYM(clish_history);
 CLISH_PLUGIN_SYM(clish_nested_up);
 CLISH_PLUGIN_SYM(clish_nop);
 CLISH_PLUGIN_SYM(clish_wdog);
-CLISH_PLUGIN_SYM(clish_script);
+CLISH_PLUGIN_OSYM(clish_script);
 CLISH_PLUGIN_SYM(clish_macros);

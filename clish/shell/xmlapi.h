@@ -7,6 +7,10 @@
 #ifndef clish_xmlapi_included_h
 #define clish_xmlapi_included_h
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdlib.h>
 #include <errno.h>
 #include <stdio.h> /* need for FILE */
@@ -22,6 +26,13 @@ typedef struct clish_xmldoc_s clish_xmldoc_t;
  * The real type is defined by the selected external API
  */
 typedef struct clish_xmlnode_s clish_xmlnode_t;
+
+/*
+ * Start and Stop XML parser engine.
+ * Some parsers need a global cleanup at the end of the programm.
+ */
+int clish_xmldoc_start(void);
+int clish_xmldoc_stop(void);
 
 /*
  * read an XML document
@@ -48,7 +59,7 @@ typedef enum {
 	CLISH_XMLERR_LINE 	= 0x10,
 	CLISH_XMLERR_COL 	= 0x20,
 	CLISH_XMLERR_DESC 	= 0x40
-} clish_xmlerrcaps_t;
+} clish_xmlerrcaps_e;
 
 /*
  * does this specific implementation define any error?
@@ -65,7 +76,7 @@ typedef enum {
 	CLISH_XMLNODE_PI,
 	CLISH_XMLNODE_DECL,
 	CLISH_XMLNODE_UNKNOWN,
-} clish_xmlnodetype_t;
+} clish_xmlnodetype_e;
 
 /*
  * get error description, when available
@@ -192,6 +203,40 @@ void clish_xml_release(void *p);
  * print an XML node to the out file
  */
 void clish_xmlnode_print(clish_xmlnode_t *node, FILE *out);
+
+#ifdef HAVE_LIB_LIBXSLT
+
+/*
+ * XSLT stylesheet (opaque type)
+ * The real type is defined by the selected external API
+ */
+typedef struct clish_xslt_s clish_xslt_t;
+
+/*
+ * Load an XSLT stylesheet
+ */
+clish_xslt_t *clish_xslt_read(const char *filename);
+
+/*
+ * Load an embedded XSLT stylesheet from already
+ * loaded XML document.
+ */
+clish_xslt_t *clish_xslt_read_embedded(clish_xmldoc_t *xmldoc);
+
+/* Apply XSLT stylesheet */
+clish_xmldoc_t *clish_xslt_apply(clish_xmldoc_t *xmldoc, clish_xslt_t *stylesheet);
+
+/*
+ * Release a previously opened XSLT stylesheet
+ */
+void clish_xslt_release(clish_xslt_t *stylesheet);
+
+/*
+ * Check if a stylesheet is valid (i.e. it loaded successfully)
+ */
+int clish_xslt_is_valid(clish_xslt_t *stylesheet);
+
+#endif /* HAVE_LIB_LIBXSLT */
 
 #endif /* clish_xmlapi_included_h */
 

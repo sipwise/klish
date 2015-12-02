@@ -33,6 +33,9 @@
 /* libxml2-based XML backend */
 #undef HAVE_LIB_LIBXML2
 
+/* libxslt XML transform engine */
+#undef HAVE_LIB_LIBXSLT
+
 /* libroxml-based XML backend */
 #undef HAVE_LIB_ROXML
 

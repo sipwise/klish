@@ -14,8 +14,17 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/file.h>
+#include <sys/wait.h>
+#include <sys/uio.h>
 #include <signal.h>
 #include <fcntl.h>
+
+/* Empty signal handler to ignore signal but don't use SIG_IGN. */
+static void sigignore(int signo)
+{
+	signo = signo; /* Happy compiler */
+	return;
+}
 
 /*-------------------------------------------------------- */
 static int clish_shell_lock(const char *lock_path)
@@ -85,8 +94,6 @@ int clish_shell_execute(clish_context_t *context, char **out)
 	int result = 0;
 	char *lock_path = clish_shell__get_lockfile(this);
 	int lock_fd = -1;
-	sigset_t old_sigs;
-	struct sigaction old_sigint, old_sigquit, old_sighup;
 	clish_view_t *cur_view = clish_shell__get_view(this);
 	unsigned int saved_wdog_timeout = this->wdog_timeout;
 
@@ -94,7 +101,7 @@ int clish_shell_execute(clish_context_t *context, char **out)
 
 	/* Pre-change view if the command is from another depth/view */
 	{
-		clish_view_restore_t restore = clish_command__get_restore(cmd);
+		clish_view_restore_e restore = clish_command__get_restore(cmd);
 		if ((CLISH_RESTORE_VIEW == restore) &&
 			(clish_command__get_pview(cmd) != cur_view)) {
 			clish_view_t *view = clish_command__get_pview(cmd);
@@ -114,42 +121,10 @@ int clish_shell_execute(clish_context_t *context, char **out)
 		}
 	}
 
-	/* Ignore and block SIGINT, SIGQUIT, SIGHUP */
-	if (!clish_command__get_interrupt(cmd)) {
-		struct sigaction sa;
-		sigset_t sigs;
-		sa.sa_flags = 0;
-		sigemptyset(&sa.sa_mask);
-		sa.sa_handler = SIG_IGN;
-		sigaction(SIGINT, &sa, &old_sigint);
-		sigaction(SIGQUIT, &sa, &old_sigquit);
-		sigaction(SIGHUP, &sa, &old_sighup);
-		sigemptyset(&sigs);
-		sigaddset(&sigs, SIGINT);
-		sigaddset(&sigs, SIGQUIT);
-		sigaddset(&sigs, SIGHUP);
-		sigprocmask(SIG_BLOCK, &sigs, &old_sigs);
-	}
-
 	/* Execute ACTION */
 	clish_context__set_action(context, clish_command__get_action(cmd));
-	result = clish_shell_exec_action(context, out);
-
-	/* Restore SIGINT, SIGQUIT, SIGHUP */
-	if (!clish_command__get_interrupt(cmd)) {
-		sigprocmask(SIG_SETMASK, &old_sigs, NULL);
-		/* Is the signals delivery guaranteed here (before
-		   sigaction restore) for previously blocked and
-		   pending signals? The simple test is working well.
-		   I don't want to use sigtimedwait() function bacause
-		   it needs a realtime extensions. The sigpending() with
-		   the sleep() is not nice too. Report bug if clish will
-		   get the SIGINT after non-interruptable action.
-		*/
-		sigaction(SIGINT, &old_sigint, NULL);
-		sigaction(SIGQUIT, &old_sigquit, NULL);
-		sigaction(SIGHUP, &old_sighup, NULL);
-	}
+	result = clish_shell_exec_action(context, out,
+		clish_command__get_interrupt(cmd));
 
 	/* Call config callback */
 	if (!result)
@@ -203,14 +178,123 @@ error:
 }
 
 /*----------------------------------------------------------- */
-int clish_shell_exec_action(clish_context_t *context, char **out)
+/* Execute oaction. It suppose the forked process to get
+ * script's stdout. Then forked process write the output back
+ * to klish.
+ */
+static int clish_shell_exec_oaction(clish_hook_oaction_fn_t func,
+	void *context, const char *script, char **out)
+{
+	int result = -1;
+	int real_stdout; /* Saved stdout handler */
+	int pipe1[2], pipe2[2];
+	pid_t cpid = -1;
+	konf_buf_t *buf;
+
+	if (pipe(pipe1))
+		return -1;
+	if (pipe(pipe2))
+		goto stdout_error;
+
+	/* Create process to read script's stdout */
+	cpid = fork();
+	if (cpid == -1) {
+		fprintf(stderr, "Error: Can't fork the stdout-grabber process.\n"
+			"Error: The ACTION will be not executed.\n");
+		goto stdout_error;
+	}
+
+	/* Child: read action's stdout */
+	if (cpid == 0) {
+		lub_list_t *l;
+		lub_list_node_t *node;
+		struct iovec *iov;
+		const int rsize = CLISH_STDOUT_CHUNK; /* Read chunk size */
+		size_t cur_size = 0;
+
+		close(pipe1[1]);
+		close(pipe2[0]);
+		l = lub_list_new(NULL);
+
+		/* Read the result of script execution */
+		while (1) {
+			ssize_t ret;
+			iov = malloc(sizeof(*iov));
+			iov->iov_len = rsize;
+			iov->iov_base = malloc(iov->iov_len);
+			do {
+				ret = readv(pipe1[0], iov, 1);
+			} while ((ret < 0) && (errno == EINTR));
+			if (ret <= 0) { /* Error or EOF */
+				free(iov->iov_base);
+				free(iov);
+				break;
+			}
+			iov->iov_len = ret;
+			lub_list_add(l, iov);
+			/* Check the max size of buffer */
+			cur_size += ret;
+			if (cur_size >= CLISH_STDOUT_MAXBUF)
+				break;
+		}
+		close(pipe1[0]);
+
+		/* Write the result of script back to klish */
+		while ((node = lub_list__get_head(l))) {
+			iov = lub_list_node__get_data(node);
+			lub_list_del(l, node);
+			lub_list_node_free(node);
+			write(pipe2[1], iov->iov_base, iov->iov_len);
+			free(iov->iov_base);
+			free(iov);
+		}
+		close(pipe2[1]);
+
+		lub_list_free(l);
+		_exit(0);
+	}
+
+	real_stdout = dup(STDOUT_FILENO);
+	dup2(pipe1[1], STDOUT_FILENO);
+	close(pipe1[0]);
+	close(pipe1[1]);
+	close(pipe2[1]);
+
+	result = func(context, script);
+
+	/* Restore real stdout */
+	dup2(real_stdout, STDOUT_FILENO);
+	close(real_stdout);
+	/* Read the result of script execution */
+	buf = konf_buf_new(pipe2[0]);
+	while (konf_buf_read(buf) > 0);
+	*out = konf_buf__dup_line(buf);
+	konf_buf_delete(buf);
+	close(pipe2[0]);
+	/* Wait for the stdout-grabber process */
+	waitpid(cpid, NULL, 0);
+
+	return result;
+
+stdout_error:
+	close(pipe1[0]);
+	close(pipe1[1]);
+	return -1;
+}
+
+/*----------------------------------------------------------- */
+int clish_shell_exec_action(clish_context_t *context, char **out, bool_t intr)
 {
 	int result = -1;
 	clish_sym_t *sym;
 	char *script;
-	clish_hook_action_fn_t *func = NULL;
+	void *func = NULL; /* We don't know the func API at this time */
 	const clish_action_t *action = clish_context__get_action(context);
 	clish_shell_t *shell = clish_context__get_shell(context);
+	/* Signal vars */
+	struct sigaction old_sigint, old_sigquit, old_sighup;
+	struct sigaction sa;
+	sigset_t old_sigs;
 
 	if (!(sym = clish_action__get_builtin(action)))
 		return 0;
@@ -221,7 +305,59 @@ int clish_shell_exec_action(clish_context_t *context, char **out)
 		return -1;
 	}
 	script = clish_shell_expand(clish_action__get_script(action), SHELL_VAR_ACTION, context);
-	result = func(context, script, out);
+
+	/* Ignore and block SIGINT, SIGQUIT, SIGHUP.
+	 * The SIG_IGN is not a case because it will be inherited
+	 * while a fork(). It's necessary to ignore signals because
+	 * the klish itself and ACTION script share the same terminal.
+	 */
+	sa.sa_flags = 0;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_handler = sigignore; /* Empty signal handler */
+	sigaction(SIGINT, &sa, &old_sigint);
+	sigaction(SIGQUIT, &sa, &old_sigquit);
+	sigaction(SIGHUP, &sa, &old_sighup);
+	/* Block signals for children processes. The block state is inherited. */
+	if (!intr) {
+		sigset_t sigs;
+		sigemptyset(&sigs);
+		sigaddset(&sigs, SIGINT);
+		sigaddset(&sigs, SIGQUIT);
+		sigaddset(&sigs, SIGHUP);
+		sigprocmask(SIG_BLOCK, &sigs, &old_sigs);
+	}
+
+	/* Find out the function API */
+	/* CLISH_SYM_API_SIMPLE */
+	if (clish_sym__get_api(sym) == CLISH_SYM_API_SIMPLE) {
+		result = ((clish_hook_action_fn_t *)func)(context, script, out);
+
+	/* CLISH_SYM_API_STDOUT and output is not needed */
+	} else if ((clish_sym__get_api(sym) == CLISH_SYM_API_STDOUT) && (!out)) {
+		result = ((clish_hook_oaction_fn_t *)func)(context, script);
+
+	/* CLISH_SYM_API_STDOUT and outpus is needed */
+	} else if (clish_sym__get_api(sym) == CLISH_SYM_API_STDOUT) {
+		result = clish_shell_exec_oaction((clish_hook_oaction_fn_t *)func,
+			context, script, out);
+	}
+
+	/* Restore SIGINT, SIGQUIT, SIGHUP */
+	if (!intr) {
+		sigprocmask(SIG_SETMASK, &old_sigs, NULL);
+		/* Is the signals delivery guaranteed here (before
+		   sigaction restore) for previously blocked and
+		   pending signals? The simple test is working well.
+		   I don't want to use sigtimedwait() function because
+		   it needs a realtime extensions. The sigpending() with
+		   the sleep() is not nice too. Report bug if clish will
+		   get the SIGINT after non-interruptable action.
+		*/
+	}
+	sigaction(SIGINT, &old_sigint, NULL);
+	sigaction(SIGQUIT, &old_sigquit, NULL);
+	sigaction(SIGHUP, &old_sighup, NULL);
+
 	lub_string_free(script);
 
 	return result;

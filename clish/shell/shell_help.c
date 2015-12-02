@@ -48,7 +48,7 @@ static int available_params(clish_shell_t *this,
 	clish_pargv_t *completion, *pargv;
 	unsigned i;
 	unsigned cnt = 0;
-	clish_pargv_status_t status = CLISH_LINE_OK;
+	clish_pargv_status_e status = CLISH_LINE_OK;
 	clish_context_t context;
 
 	/* Empty line */

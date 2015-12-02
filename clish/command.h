@@ -73,7 +73,7 @@ void clish_command__set_pview(clish_command_t * instance, clish_view_t * view);
 clish_view_t *clish_command__get_pview(const clish_command_t * instance);
 int clish_command__get_depth(const clish_command_t * instance);
 clish_config_t *clish_command__get_config(const clish_command_t *instance);
-clish_view_restore_t clish_command__get_restore(const clish_command_t * instance);
+clish_view_restore_e clish_command__get_restore(const clish_command_t * instance);
 const clish_command_t * clish_command__get_orig(const clish_command_t * instance);
 const clish_command_t * clish_command__get_cmd(const clish_command_t * instance);
 bool_t clish_command__get_lock(const clish_command_t * instance);

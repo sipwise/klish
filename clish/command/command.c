@@ -382,7 +382,7 @@ int clish_command__get_depth(const clish_command_t * this)
 }
 
 /*--------------------------------------------------------- */
-clish_view_restore_t clish_command__get_restore(const clish_command_t * this)
+clish_view_restore_e clish_command__get_restore(const clish_command_t * this)
 {
 	if (!this->pview)
 		return CLISH_RESTORE_NONE;
