@@ -1,3 +1,12 @@
+klish (2.1.1-1+0~mr4.4.0.0) unstable; urgency=medium
+
+  [ Michael Prokop ]
+  * [567459f] MT#17699 Bump Standards-Version to 3.9.7
+
+  [ Sipwise Jenkins Builder ]
+
+ -- Sipwise Jenkins Builder <jenkins@sipwise.com>  Mon, 21 Mar 2016 22:17:08 +0100
+
 klish (2.1.1-1+0~mr4.3.0.0) unstable; urgency=medium
 
   [ Victor Seva ]
