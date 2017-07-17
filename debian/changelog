@@ -1,3 +1,9 @@
+klish (2.1.1-1+0~mr5.5.0.0) unstable; urgency=medium
+
+  * New release.
+
+ -- Sipwise Jenkins Builder <jenkins@sipwise.com>  Mon, 17 Jul 2017 22:43:40 +0200
+
 klish (2.1.1-1+0~mr5.4.0.0) unstable; urgency=medium
 
   [ Alexander Lutay ]
