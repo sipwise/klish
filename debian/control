@@ -1,16 +1,14 @@
 Source: klish
-Maintainer: Sipwise Development Team <support@sipwise.com>
-Uploaders:
- Victor Seva <vseva@sipwise.com>,
 Section: shells
-Priority: extra
-Standards-Version: 3.9.7
+Priority: optional
+Maintainer: Sipwise Development Team <support@sipwise.com>
+Homepage: https://www.nixus.es/
+Standards-Version: 3.9.8
 Build-Depends:
- debhelper (>= 9~),
+ debhelper (>= 10),
  dh-autoreconf,
  libexpat1-dev,
  liblua5.1-0-dev,
-Homepage: http://www.nixus.es
 
 Package: klish
 Architecture: any
