@@ -14,7 +14,6 @@ Package: klish
 Architecture: any
 Depends:
  libexpat1,
- lsb-base,
  ${misc:Depends},
  ${shlibs:Depends},
 Description: command line interface shell
