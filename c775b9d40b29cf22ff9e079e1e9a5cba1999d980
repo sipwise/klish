@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7aaa499b_937cee21",
+        "filename": "debian/klish.postinst",
+        "patchSetId": 1
+      },
+      "lineNbr": 8,
+      "author": {
+        "id": 1000001
+      },
+      "writtenOn": "2018-04-30T08:27:59Z",
+      "side": 1,
+      "message": "never saw it.",
+      "range": {
+        "startLine": 8,
+        "startChar": 16,
+        "endLine": 8,
+        "endChar": 21
+      },
+      "revId": "c775b9d40b29cf22ff9e079e1e9a5cba1999d980",
+      "serverId": "85315e57-5f03-49c3-83f8-201ae2313a75",
+      "unresolved": false
+    }
+  ]
+}
