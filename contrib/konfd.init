@@ -15,7 +15,7 @@ start)
 stop)
 	echo "Stopping konfd daemon..."
 	test ! -r $PID && { echo "The service is not running."; exit 1; }
-	kill $(cat $PID)
+	kill "$(cat $PID)"
 	;;
 *)
 	echo "Usage: $0 {start|stop}"
