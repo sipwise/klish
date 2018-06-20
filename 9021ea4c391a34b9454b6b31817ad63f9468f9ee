@@ -1,0 +1,9 @@
+Verified+1: Jenkins Jenkins
+Code-Review+2: Alexander Lutay <alutay@sipwise.com>
+Code-Review+2: Mykola Malkov <mmalkov@sipwise.com>
+Code-Review+1: Manuel Montecelo <mmontecelo@sipwise.com>
+Submitted-by: Guillem Jover <gjover@sipwise.com>
+Submitted-at: Wed, 20 Jun 2018 12:16:05 +0200
+Reviewed-on: http://gerrit.mgm.sipwise.com/22064
+Project: klish
+Branch: refs/heads/master
