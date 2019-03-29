@@ -6,7 +6,7 @@
 DESTDIR = $(CURDIR)/debian/tmp
 
 %:
-	dh $@ --with autoreconf
+	dh $@ --with autoreconf --parallel
 
 override_dh_auto_configure:
 	./configure --prefix=/usr --libdir=/usr/lib/clish \
