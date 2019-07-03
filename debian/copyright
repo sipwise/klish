@@ -1,6 +1,6 @@
-Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: klish
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Source: http://klish.googlecode.com
+Upstream-Name: klish
 
 Files: *
 Copyright: 2005 3Com Corporation,
