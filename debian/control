@@ -8,7 +8,7 @@ Build-Depends:
  debhelper-compat (= 12),
  dh-autoreconf,
  libexpat1-dev,
- liblua5.1-0-dev,
+ liblua5.2-dev,
 
 Package: klish
 Architecture: any
