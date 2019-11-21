@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "320a88ce_615aa090",
+        "filename": "debian/patches/lua5.2.patch",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000001
+      },
+      "writtenOn": "2019-11-21T14:50:00Z",
+      "side": 1,
+      "message": "and... that\u0027s it? 0_o\n\nP.S. should we upload klish to buster?",
+      "revId": "8ee5852e8cf466d1e7b561135b5cdb1f25a9bfb5",
+      "serverId": "85315e57-5f03-49c3-83f8-201ae2313a75",
+      "unresolved": false
+    }
+  ]
+}
