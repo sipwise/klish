@@ -1,0 +1,3 @@
+usr/lib/clish/*.la
+usr/lib/clish/clish_plugin_clish.a
+usr/lib/clish/clish_plugin_lua.a

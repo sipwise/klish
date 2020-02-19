@@ -25,6 +25,5 @@ Architecture: any
 Depends:
  klish,
  ${misc:Depends},
- ${shlibs:Depends},
 Description: development files for klish
  This package contains the development files for klish.
