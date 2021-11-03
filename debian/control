@@ -3,10 +3,9 @@ Section: shells
 Priority: optional
 Maintainer: Sipwise Development Team <support@sipwise.com>
 Homepage: https://www.nixus.es/
-Standards-Version: 3.9.8
+Standards-Version: 4.5.1
 Build-Depends:
- debhelper-compat (= 12),
- dh-autoreconf,
+ debhelper-compat (= 13),
  libexpat1-dev,
  liblua5.2-dev,
 

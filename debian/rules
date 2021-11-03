@@ -3,17 +3,12 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
-DESTDIR = $(CURDIR)/debian/tmp
-
 %:
-	dh $@ --with autoreconf
+	dh $@
 
 override_dh_auto_configure:
 	./configure --prefix=/usr --libdir=/usr/lib/clish \
 				--includedir=/usr/include/clish --with-lua
-
-override_dh_auto_install:
-	dh_auto_install --destdir=$(DESTDIR)
 
 override_dh_installsystemd:
 	dh_installsystemd -pklish --name=konfd --no-enable --no-start
