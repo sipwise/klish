@@ -7,7 +7,7 @@
 	dh $@
 
 override_dh_auto_configure:
-	./configure --prefix=/usr --libdir=/usr/lib/clish \
+	./configure --prefix=/usr --libdir=/usr/lib/klish \
 				--includedir=/usr/include/clish --with-lua
 
 override_dh_installsystemd:
