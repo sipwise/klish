@@ -1,3 +1,0 @@
-libclish_la_SOURCES += \
-	clish/udata/udata.c \
-	clish/udata/private.h

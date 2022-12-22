@@ -1,2 +1,0 @@
-liblub_la_SOURCES +=	lub/dump/dump.c		\
-			lub/dump/private.h

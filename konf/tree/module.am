@@ -1,4 +1,0 @@
-libkonf_la_SOURCES += \
-	konf/tree/tree.c \
-	konf/tree/tree_dump.c \
-	konf/tree/private.h

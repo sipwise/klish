@@ -1,8 +1,0 @@
-## Process this file with automake to produce Makefile.in
-
-EXTRA_DIST += \
-	plugins/lua/module.am \
-	plugins/clish/module.am
-
-include $(top_srcdir)/plugins/clish/module.am
-include $(top_srcdir)/plugins/lua/module.am

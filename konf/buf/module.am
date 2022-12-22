@@ -1,3 +1,0 @@
-libkonf_la_SOURCES += \
-	konf/buf/buf.c \
-	konf/buf/private.h
